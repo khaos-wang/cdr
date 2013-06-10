@@ -54,6 +54,7 @@ import org.yccheok.jstock.file.Atom;
 import org.yccheok.jstock.file.GUIBundleWrapper;
 import org.yccheok.jstock.file.Statement;
 import org.yccheok.jstock.file.Statements;
+import org.yccheok.jstock.gui.cdr.CDRSettingsJDialog;
 import org.yccheok.jstock.gui.charting.DynamicChart;
 import org.yccheok.jstock.gui.portfolio.PortfolioJDialog;
 import org.yccheok.jstock.gui.table.NonNegativeDoubleEditor;
@@ -416,6 +417,8 @@ public class MainFrame extends javax.swing.JFrame {
         jMenu11 = new javax.swing.JMenu();
         jMenuItem13 = new javax.swing.JMenuItem();
         jMenuItem14 = new javax.swing.JMenuItem();
+        jMenu12 = new javax.swing.JMenu();
+        jMenuItem17 = new javax.swing.JMenuItem();
 
         jComboBox1.setEditable(true);
         jComboBox1.setPreferredSize(new java.awt.Dimension(150, 24));
@@ -657,9 +660,9 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenu9.setText(bundle.getString("MainFrame_Watchlist")); // NOI18N
         jMenu9.addMenuListener(new javax.swing.event.MenuListener() {
-            public void menuCanceled(javax.swing.event.MenuEvent evt) {
-            }
             public void menuDeselected(javax.swing.event.MenuEvent evt) {
+            }
+            public void menuCanceled(javax.swing.event.MenuEvent evt) {
             }
             public void menuSelected(javax.swing.event.MenuEvent evt) {
                 jMenu9MenuSelected(evt);
@@ -669,9 +672,9 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenu8.setText(bundle.getString("MainFrame_Portfolio")); // NOI18N
         jMenu8.addMenuListener(new javax.swing.event.MenuListener() {
-            public void menuCanceled(javax.swing.event.MenuEvent evt) {
-            }
             public void menuDeselected(javax.swing.event.MenuEvent evt) {
+            }
+            public void menuCanceled(javax.swing.event.MenuEvent evt) {
             }
             public void menuSelected(javax.swing.event.MenuEvent evt) {
                 jMenu8MenuSelected(evt);
@@ -752,10 +755,22 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenuBar2.add(jMenu11);
 
+        jMenu12.setText(bundle.getString("MainFrame_CDR")); // NOI18N
+
+        jMenuItem17.setText(bundle.getString("MainFrame_CDRSettings")); // NOI18N
+        jMenuItem17.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem17ActionPerformed(evt);
+            }
+        });
+        jMenu12.add(jMenuItem17);
+
+        jMenuBar2.add(jMenu12);
+
         setJMenuBar(jMenuBar2);
 
-        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds((screenSize.width-952)/2, (screenSize.height-478)/2, 952, 478);
+        setSize(new java.awt.Dimension(952, 478));
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private void jMenuItem4ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem4ActionPerformed
@@ -1481,6 +1496,12 @@ public class MainFrame extends javax.swing.JFrame {
     private void jMenuItem16ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem16ActionPerformed
         Utils.launchWebBrowser(org.yccheok.jstock.network.Utils.getURL(org.yccheok.jstock.network.Utils.Type.HELP_KEYBOARD_SHORTCUTS_HTML));
     }//GEN-LAST:event_jMenuItem16ActionPerformed
+
+    private void jMenuItem17ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem17ActionPerformed
+        // TODO add your handling code here:
+        CDRSettingsJDialog cdr = new CDRSettingsJDialog(this, true);
+        cdr.setVisible(true);
+    }//GEN-LAST:event_jMenuItem17ActionPerformed
     
     /**
      * Activate specified watchlist.
@@ -4512,6 +4533,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenu jMenu1;
     private javax.swing.JMenu jMenu10;
     private javax.swing.JMenu jMenu11;
+    private javax.swing.JMenu jMenu12;
     private javax.swing.JMenu jMenu2;
     private javax.swing.JMenu jMenu3;
     private javax.swing.JMenu jMenu4;
@@ -4529,6 +4551,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuItem jMenuItem14;
     private javax.swing.JMenuItem jMenuItem15;
     private javax.swing.JMenuItem jMenuItem16;
+    private javax.swing.JMenuItem jMenuItem17;
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenuItem jMenuItem4;

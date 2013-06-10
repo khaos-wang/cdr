@@ -136,6 +136,10 @@ public class TechnicalAnalysis {
 
         return output[outNbElement.value - 1];
     }
+    
+    public static Double createCDR(Double close, Double prevClose) {
+        return Math.log(close / prevClose) * 100;
+    }
 
     // Moving Average Convergence/Divergence Fix 12/26
     public static MACD.Result createMACDFix(List<Double> values, int period) {
@@ -363,6 +367,33 @@ public class TechnicalAnalysis {
             series.add(new Day(new Date(chartDatas.get(i + outBegIdx.value).timestamp)), output[i]);
         }
 
+        return new TimeSeriesCollection(series);
+    }
+    
+    public static XYDataset createCDR(List<ChartData> chartDatas, String name, int period) {
+        if (period <= 0) {
+            throw new java.lang.IllegalArgumentException("period must be greater than 0");
+        }
+
+        final TimeSeries series = new TimeSeries(name);
+        final int num = chartDatas.size();
+        
+        final int allocationSize = num - period;
+        if (allocationSize <= 0) {
+            return new TimeSeriesCollection(series);
+        }
+
+        final double[] last = new double[num];
+        // Fill up last array.
+        for (int i = 0; i < num; i++) {
+            last[i] = chartDatas.get(i).lastPrice;
+        }
+
+        for (int i = 0; i < allocationSize; i++) {
+            double cdr = createCDR(last[i + period], last[i]);
+            series.add(new Day(new Date(chartDatas.get(i + period).timestamp)), cdr);
+        }
+        
         return new TimeSeriesCollection(series);
     }
 

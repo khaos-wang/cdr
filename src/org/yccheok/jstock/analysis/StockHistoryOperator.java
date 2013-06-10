@@ -43,7 +43,8 @@ public class StockHistoryOperator extends AbstractOperator {
         MFI,
         MACD,
         MACDSignal,
-        MACDHist        
+        MACDHist,
+        CDR
     }
     
     public enum Type
@@ -366,6 +367,14 @@ public class StockHistoryOperator extends AbstractOperator {
                 
             case MACDHist:
                 v = TechnicalAnalysis.createMACDFix(values, day).outMACDHist;
+                break;
+                
+            case CDR:
+                if (values.size() > 1) {
+                    v = TechnicalAnalysis.createCDR(values.get(values.size() - 2), values.get(values.size() - 1));
+                } else {
+                    v = 0.0;
+                }                
                 break;
                 
             default:

@@ -85,7 +85,8 @@ public class ChartJDialog extends javax.swing.JDialog {
         MACD,
         RSI,
         MFI,        
-        CCI,        
+        CCI,
+        CDR,
     }
 
     public enum Type {
@@ -220,15 +221,16 @@ public class ChartJDialog extends javax.swing.JDialog {
             assert(false);
         }
         final TA[] tas = TA.values();
-        final String[] ta_keys = {"ChartJDialog_SMA", "ChartJDialog_EMA", "ChartJDialog_MACD", "ChartJDialog_RSI", "ChartJDialog_MFI", "ChartJDialog_CCI" };
-        final String[] ta_tip_keys = {"ChartJDialog_SimpleMovingAverage", "ChartJDialog_ExponentialMovingAverage", "ChartJDialog_MovingAverageConvergenceDivergence", "ChartJDialog_RelativeStrengthIndex", "ChartJDialog_MoneyFlowIndex", "ChartJDialog_CommodityChannelIndex" };
+        final String[] ta_keys = {"ChartJDialog_SMA", "ChartJDialog_EMA", "ChartJDialog_MACD", "ChartJDialog_RSI", "ChartJDialog_MFI", "ChartJDialog_CCI", "ChartJDialog_CDR" };
+        final String[] ta_tip_keys = {"ChartJDialog_SimpleMovingAverage", "ChartJDialog_ExponentialMovingAverage", "ChartJDialog_MovingAverageConvergenceDivergence", "ChartJDialog_RelativeStrengthIndex", "ChartJDialog_MoneyFlowIndex", "ChartJDialog_CommodityChannelIndex", "ChartJDialog_CDRIndex" };
         final String[] custom_message_keys = {
             "info_message_please_enter_number_of_days_for_SMA",
             "info_message_please_enter_number_of_days_for_EMA",
             "dummy",
             "info_message_please_enter_number_of_days_for_RSI",
             "info_message_please_enter_number_of_days_for_MFI",
-            "info_message_please_enter_number_of_days_for_CCI"
+            "info_message_please_enter_number_of_days_for_CCI",
+            "info_message_please_enter_number_of_days_for_CDR"
         };
         final Map<TA, Set<Object>> m = new EnumMap<TA, Set<Object>>(TA.class);
         final int taExSize = MainFrame.getInstance().getChartJDialogOptions().getTAExSize();
@@ -293,6 +295,9 @@ public class ChartJDialog extends javax.swing.JDialog {
                             }
                             else if (ta == TA.CCI) {
                                 updateCCI(days[_j], item.isSelected());
+                            }
+                            else if (ta == TA.CDR) {
+                                updateCDR(days[_j], item.isSelected());
                             }
                         }
                     });
@@ -371,6 +376,9 @@ public class ChartJDialog extends javax.swing.JDialog {
         else if (ta == TA.CCI) {
             updateCCI(days, show);
         }
+        if (ta == TA.CDR) {
+            updateCDR(days, show);
+        }      
     }
 
     /**
@@ -859,6 +867,10 @@ public class ChartJDialog extends javax.swing.JDialog {
             else if (taEx.ta == TA.MACD) {
                 this.updateMACD((MACD.Period)taEx.parameter, false);
                 i--;                
+            }
+            else if (taEx.ta == TA.CDR) {
+                this.updateCDR((Integer)taEx.parameter, false);
+                i--;
             }
             else {
                 assert(false);
@@ -1461,6 +1473,17 @@ public class ChartJDialog extends javax.swing.JDialog {
         }
         return days + c + " RSI";
     }
+    
+    private String getCDRKey(int days) {
+        Interval interval = this.getCurrentInterval();
+        String c = "d";
+        if (interval == Interval.Weekly) {
+            c = "w";
+        } else if (interval == Interval.Monthly) {
+            c = "m";
+        }
+        return days + c + " CDR";
+    }
 
     private String getMACDKey(MACD.Period period) {
         Interval interval = this.getCurrentInterval();
@@ -1740,6 +1763,87 @@ public class ChartJDialog extends javax.swing.JDialog {
         }
     }
 
+    private void updateCDR(int days, boolean show) {
+        if (this.priceVolumeChart == null) {
+            this.priceVolumeChart = this.createPriceVolumeChart(this.priceDataset, this.volumeDataset);
+        }
+        if (this.candlestickChart == null) {
+            this.candlestickChart = this.createCandlestickChart(this.priceOHLCDataset);
+        }
+
+        final TAEx taEx = TAEx.newInstance(TA.CDR, new Integer(days));
+
+        if (show) {
+            if (price_volume_ta_map.containsKey(taEx) == false) {
+                final XYDataset dataset = org.yccheok.jstock.charting.TechnicalAnalysis.createCDR(this.chartDatas, getCDRKey(days), days);
+                NumberAxis rangeAxis1 = new NumberAxis(GUIBundle.getString("ChartJDialog_CDR"));
+                rangeAxis1.setAutoRangeIncludesZero(false);     // override default
+                rangeAxis1.setLowerMargin(0.40);                // to leave room for volume bars
+                DecimalFormat format = new DecimalFormat("0");
+                rangeAxis1.setNumberFormatOverride(format);
+
+                final ValueAxis timeAxis = new DateAxis(GUIBundle.getString("ChartJDialog_Date"));
+                timeAxis.setLowerMargin(0.02);                  // reduce the default margins
+                timeAxis.setUpperMargin(0.02);
+
+                XYPlot plot = new XYPlot(dataset, timeAxis, rangeAxis1, null);
+
+                XYItemRenderer renderer1 = new XYLineAndShapeRenderer(true, false);
+                renderer1.setBaseToolTipGenerator(
+                    new StandardXYToolTipGenerator(
+                        StandardXYToolTipGenerator.DEFAULT_TOOL_TIP_FORMAT,
+                        new SimpleDateFormat("d-MMM-yyyy"), new DecimalFormat("0.00#")
+                    )
+                );
+                plot.setRenderer(0, renderer1);
+                price_volume_ta_map.put(taEx, plot);
+            }
+
+            if (candlestick_ta_map.containsKey(taEx) == false) {
+                try {
+                    /* Not sure why. I cannot make priceVolumeChart and candlestickChart sharing the same
+                     * plot. If not, this will inhibit incorrect zooming behavior.
+                     */
+                    candlestick_ta_map.put(taEx, (XYPlot)price_volume_ta_map.get(taEx).clone());
+                } catch (CloneNotSupportedException ex) {
+                    log.error(null, ex);
+                }
+            }
+
+            if (this.activeTAExs.contains(taEx) == false)
+            {
+                // Avoid duplication.
+                final XYPlot price_volume_ta = price_volume_ta_map.get(taEx);
+                final XYPlot candlestick_ta = candlestick_ta_map.get(taEx);
+                final CombinedDomainXYPlot cplot0 = (CombinedDomainXYPlot)this.priceVolumeChart.getPlot();
+                final CombinedDomainXYPlot cplot1 = (CombinedDomainXYPlot)this.candlestickChart.getPlot();
+
+                if (price_volume_ta != null) cplot0.add(price_volume_ta, 1);    // weight is 1.
+                if (candlestick_ta != null) cplot1.add(candlestick_ta, 1);      // weight is 1.
+                org.yccheok.jstock.charting.Utils.applyChartThemeEx(this.priceVolumeChart);
+                org.yccheok.jstock.charting.Utils.applyChartThemeEx(this.candlestickChart);
+            }
+        }
+        else {
+            final CombinedDomainXYPlot cplot0 = (CombinedDomainXYPlot)this.priceVolumeChart.getPlot();
+            final CombinedDomainXYPlot cplot1 = (CombinedDomainXYPlot)this.candlestickChart.getPlot();
+            final XYPlot price_volume_ta = price_volume_ta_map.get(taEx);
+            final XYPlot candlestick_ta = candlestick_ta_map.get(taEx);
+
+            if (price_volume_ta != null) cplot0.remove(price_volume_ta);
+            if (candlestick_ta != null) cplot1.remove(candlestick_ta);
+        }
+
+        if (show && this.activeTAExs.contains(taEx) == false) {
+            this.activeTAExs.add(taEx);
+            MainFrame.getInstance().getChartJDialogOptions().add(taEx);
+        }
+        else if (!show) {
+            this.activeTAExs.remove(taEx);
+            MainFrame.getInstance().getChartJDialogOptions().remove(taEx);
+        }
+    }
+    
     private void showMACDCustomDialog() {        
         System.out.println("showMACDCustomDialog");
     }
