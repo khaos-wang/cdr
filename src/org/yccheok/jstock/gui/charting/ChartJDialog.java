@@ -1775,7 +1775,7 @@ public class ChartJDialog extends javax.swing.JDialog {
 
         if (show) {
             if (price_volume_ta_map.containsKey(taEx) == false) {
-                final XYDataset dataset = org.yccheok.jstock.charting.TechnicalAnalysis.createCDR(this.chartDatas, getCDRKey(days), days);
+                final XYDataset dataset = org.yccheok.jstock.charting.TechnicalAnalysis.createCDR(this.stockHistoryServer, this.chartDatas, getCDRKey(days), days);
                 NumberAxis rangeAxis1 = new NumberAxis(GUIBundle.getString("ChartJDialog_CDR"));
                 rangeAxis1.setAutoRangeIncludesZero(false);     // override default
                 rangeAxis1.setLowerMargin(0.40);                // to leave room for volume bars

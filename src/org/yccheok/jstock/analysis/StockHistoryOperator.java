@@ -24,6 +24,7 @@ import java.util.*;
 import org.yccheok.jstock.engine.*;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.yccheok.jstock.cdr.CDRCalculator;
 import org.yccheok.jstock.charting.TechnicalAnalysis;
 
 /**
@@ -371,7 +372,7 @@ public class StockHistoryOperator extends AbstractOperator {
                 
             case CDR:
                 if (values.size() > 1) {
-                    v = TechnicalAnalysis.createCDR(values.get(values.size() - 2), values.get(values.size() - 1));
+                    v = CDRCalculator.cdr(values.get(values.size() - 2), values.get(values.size() - 1));
                 } else {
                     v = 0.0;
                 }                

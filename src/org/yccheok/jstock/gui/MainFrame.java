@@ -2809,6 +2809,14 @@ public class MainFrame extends javax.swing.JFrame {
         };
     }
     
+    public StockHistoryServer getStockHistoryServer(Code stockCode) {
+        return stockHistoryMonitor.getStockHistoryServer(stockCode);
+    }
+    
+    public StockHistoryMonitor getStockHistoryMonitor() {
+        return stockHistoryMonitor;
+    }
+    
     // Asynchronous call. Must be called by event dispatch thread.
     public void displayHistoryChart(Stock stock) {
         final StockHistoryServer stockHistoryServer = stockHistoryMonitor.getStockHistoryServer(stock.code);

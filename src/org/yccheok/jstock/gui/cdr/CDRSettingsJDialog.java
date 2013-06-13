@@ -12,6 +12,7 @@ import org.yccheok.jstock.engine.Symbol;
 import org.yccheok.jstock.gui.MainFrame;
 import org.yccheok.jstock.gui.AutoCompleteJComboBox;
 import org.yccheok.jstock.gui.Utils;
+import org.yccheok.jstock.cdr.CDRSettings;
 
 /**
  *
@@ -41,7 +42,7 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
         java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();        
         setBounds((screenSize.width-this.getSize().width)/2, (screenSize.height-this.getSize().height)/2, this.getSize().width, this.getSize().height);
         
-        this.settings = CDRSettings.instance.clone();
+        this.settings = CDRSettings.globalSettings.clone();
         this.jList1.setListData(this.settings.getList());
     }
     
@@ -190,7 +191,9 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
     }//GEN-LAST:event_jComboBox1ActionPerformed
 
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        CDRSettings.instance = this.settings;
+        this.settings.period = Integer.parseInt(this.jComboBox1.getSelectedItem().toString());
+        CDRSettings.globalSettings = this.settings;
+        CDRSettings.globalSettings.save();
         this.dispose();
     }//GEN-LAST:event_jButton1ActionPerformed
 

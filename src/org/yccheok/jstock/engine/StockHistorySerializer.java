@@ -59,7 +59,7 @@ public class StockHistorySerializer {
         return StatementsStockHistoryServer.newInstance(statements);
     }
     
-    private String getFileName(Code code, Duration duration) {
+    public String getFileName(Code code, Duration duration) {
         final int startYear = duration.getStartDate().getYear();
         // +1, as we prefer based 1 month, for readability.
         final int startMonth = duration.getStartDate().getMonth() + 1;

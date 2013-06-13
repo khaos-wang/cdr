@@ -28,7 +28,11 @@ import org.jfree.data.time.Day;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
+import org.yccheok.jstock.cdr.CDRCalculator;
+import org.yccheok.jstock.cdr.CDRSettings;
 import org.yccheok.jstock.engine.Stock;
+import org.yccheok.jstock.engine.StockHistoryServer;
+import org.yccheok.jstock.engine.StockInfo;
 
 /**
  *
@@ -135,10 +139,6 @@ public class TechnicalAnalysis {
         core.rsi(0, values.size() - 1, _values, period, outBegIdx, outNbElement, output);
 
         return output[outNbElement.value - 1];
-    }
-    
-    public static Double createCDR(Double close, Double prevClose) {
-        return Math.log(close / prevClose) * 100;
     }
 
     // Moving Average Convergence/Divergence Fix 12/26
@@ -370,7 +370,7 @@ public class TechnicalAnalysis {
         return new TimeSeriesCollection(series);
     }
     
-    public static XYDataset createCDR(List<ChartData> chartDatas, String name, int period) {
+    public static XYDataset createCDR(StockHistoryServer stockHistoryServer, List<ChartData> chartDatas, String name, int period) {
         if (period <= 0) {
             throw new java.lang.IllegalArgumentException("period must be greater than 0");
         }
@@ -378,20 +378,19 @@ public class TechnicalAnalysis {
         final TimeSeries series = new TimeSeries(name);
         final int num = chartDatas.size();
         
-        final int allocationSize = num - period;
-        if (allocationSize <= 0) {
+        if (num - period <= 0) {
             return new TimeSeriesCollection(series);
         }
 
-        final double[] last = new double[num];
+        final long[] timestamps = new long[num];
         // Fill up last array.
         for (int i = 0; i < num; i++) {
-            last[i] = chartDatas.get(i).lastPrice;
+            timestamps[i] = chartDatas.get(i).timestamp;
         }
-
-        for (int i = 0; i < allocationSize; i++) {
-            double cdr = createCDR(last[i + period], last[i]);
-            series.add(new Day(new Date(chartDatas.get(i + period).timestamp)), cdr);
+                
+        double[] residuals = CDRCalculator.regression(stockHistoryServer, CDRSettings.globalSettings, timestamps, period);
+        for (int i = 0; i < residuals.length; i++) {            
+            series.add(new Day(new Date(chartDatas.get(i + period).timestamp)), residuals[i]);
         }
         
         return new TimeSeriesCollection(series);

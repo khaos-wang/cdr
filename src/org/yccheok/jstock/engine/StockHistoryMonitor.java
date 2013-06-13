@@ -20,6 +20,8 @@
 package org.yccheok.jstock.engine;
 
 import java.util.concurrent.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -144,7 +146,12 @@ public class StockHistoryMonitor extends Subject<StockHistoryMonitor, StockHisto
                     break;
                 }
 
-                StockHistoryServer history = factory.getStockHistoryServer(this.code, duration);
+                StockHistoryServer history = null;
+                try {               
+                    history = new SuperStockHistoryServer(factory, this.code, duration);
+                } catch (StockHistoryNotFoundException ex) {
+                    history = null;
+                }               
 
                 if (history != null) {
                     readerLock.lock();
@@ -339,6 +346,10 @@ public class StockHistoryMonitor extends Subject<StockHistoryMonitor, StockHisto
         } finally {
              readerLock.unlock();
         }
+    }
+    
+    public StockHistorySerializer getStockHistorySerializer() {
+        return this.stockHistorySerializer;
     }
     
     public void setStockHistorySerializer(StockHistorySerializer stockHistorySerializer) {

@@ -20,6 +20,7 @@
 package org.yccheok.jstock.analysis;
 
 import com.tictactec.ta.lib.Core;
+import org.yccheok.jstock.cdr.CDRCalculator;
 import org.yccheok.jstock.charting.TechnicalAnalysis;
 import org.yccheok.jstock.engine.*;
 
@@ -353,7 +354,7 @@ public class StockRelativeHistoryOperator extends AbstractOperator {
                 
             case CDR:
                 if (values.size() > 1) {
-                    v = TechnicalAnalysis.createCDR(values.get(values.size() - 2), values.get(values.size() - 1));
+                    v = CDRCalculator.cdr(values.get(values.size() - 2), values.get(values.size() - 1));
                 } else {
                     v = 0.0;
                 }                
