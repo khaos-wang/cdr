@@ -92,20 +92,16 @@ public class CDRSettings {
             this.period = Integer.parseInt(next[0]);
             next = csvreader.readNext();
             int referenceSize = Integer.parseInt(next[0]);
-            next = csvreader.readNext();
-            if (referenceSize != next.length) {
-                throw new IOException("Bad CDR Settings");
-            }
-            
             StockInfoDatabase sid = MainFrame.getInstance().getStockInfoDatabase();
-            for (int i = 0; i < next.length; i++) {
-                StockInfo stockInfo = sid.searchStockInfo(next[i]);
+            for (int i = 0; i < referenceSize; i++) {
+                next = csvreader.readNext();           
+                StockInfo stockInfo = sid.searchStockInfo(next[0]);
                 if (stockInfo == null) {
-                    throw new IOException("Can't find reference stock " + next[i]);
+                    throw new IOException("Can't find reference stock " + next[0]);
                 }
                 this.references.add(stockInfo);
             }
-            
+
         } catch (IOException ex) {
             log.error(null, ex);
         } finally {
@@ -132,10 +128,13 @@ public class CDRSettings {
             outputStreamWriter = new OutputStreamWriter(fileOutputStream, Charset.forName("UTF-8"));
             csvwriter = new CSVWriter(outputStreamWriter);
 
-            csvwriter.writeNext(new String[] { String.valueOf(period)});
-            csvwriter.writeNext(new String[] {String.valueOf(this.references.size())} );
-            csvwriter.writeNext(this.getList());
-            
+            csvwriter.writeNext(new String[]{String.valueOf(period)});
+            csvwriter.writeNext(new String[]{String.valueOf(this.references.size())});
+            for (int i = 0; i < this.references.size(); i++) {
+                csvwriter.writeNext(new String[]{this.references.get(i).code.toString()});
+            }
+
+            csvwriter.flush();
         } catch (IOException ex) {
             log.error(null, ex);
         } finally {
