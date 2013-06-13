@@ -390,7 +390,7 @@ public class TechnicalAnalysis {
                 
         double[] residuals = CDRCalculator.regression(stockHistoryServer, CDRSettings.globalSettings, timestamps, period);
         for (int i = 0; i < residuals.length; i++) {            
-            series.add(new Day(new Date(chartDatas.get(i + period).timestamp)), residuals[i]);
+            series.add(new Day(new Date(timestamps[i + period])), residuals[i]);
         }
         
         return new TimeSeriesCollection(series);

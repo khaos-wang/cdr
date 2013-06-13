@@ -52,9 +52,9 @@ public class SuperStockHistoryServer implements StockHistoryServer {
             calendar.setTimeInMillis(this.statementsServer.getTimestamp(this.statementsServer.size() - 1));
             calendar.add(Calendar.DAY_OF_MONTH, 1);
             final SimpleDate start = new SimpleDate(calendar);
-            if (!start.equals(duration.getEndDate())) {
+            if (start.compareTo(duration.getEndDate()) < 0) {
                 Duration subDuration = new Duration(start, duration.getEndDate());
-                this.stockHistoryServer = factory.getStockHistoryServer(code, subDuration);
+                this.stockHistoryServer = factory.getStockHistoryServer(code, subDuration);                
             }
         } else {
             this.stockHistoryServer = factory.getStockHistoryServer(code, duration);

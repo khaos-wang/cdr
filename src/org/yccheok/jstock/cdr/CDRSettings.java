@@ -16,6 +16,7 @@ import java.nio.charset.Charset;
 import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.yccheok.jstock.engine.StockHistoryServer;
 import org.yccheok.jstock.engine.StockInfo;
 import org.yccheok.jstock.engine.StockInfoDatabase;
 import org.yccheok.jstock.gui.JStockOptions;
@@ -39,13 +40,12 @@ public class CDRSettings {
         final JStockOptions jStockOptions = MainFrame.getInstance().getJStockOptions();
         return org.yccheok.jstock.gui.Utils.getUserDataDirectory() + jStockOptions.getCountry() + File.separator + "cdr" + File.separator;
     }
-    public int period;
     public Vector<StockInfo> references = new Vector<StockInfo>();
 
     @Override
     public CDRSettings clone() {
         CDRSettings cloned = new CDRSettings();
-        cloned.period = this.period;
+
         cloned.references.addAll(this.references);
         return cloned;
     }
@@ -89,17 +89,19 @@ public class CDRSettings {
             csvreader = new CSVReader(inputStreamReader);
 
             String[] next = csvreader.readNext();
-            this.period = Integer.parseInt(next[0]);
-            next = csvreader.readNext();
             int referenceSize = Integer.parseInt(next[0]);
             StockInfoDatabase sid = MainFrame.getInstance().getStockInfoDatabase();
             for (int i = 0; i < referenceSize; i++) {
-                next = csvreader.readNext();           
+                next = csvreader.readNext();
                 StockInfo stockInfo = sid.searchStockInfo(next[0]);
                 if (stockInfo == null) {
                     throw new IOException("Can't find reference stock " + next[0]);
                 }
                 this.references.add(stockInfo);
+                StockHistoryServer history = MainFrame.getInstance().getStockHistoryServer(stockInfo.code);
+                if (history == null) {
+                    MainFrame.getInstance().getStockHistoryMonitor().addStockCode(stockInfo.code);
+                }
             }
 
         } catch (IOException ex) {
@@ -128,7 +130,6 @@ public class CDRSettings {
             outputStreamWriter = new OutputStreamWriter(fileOutputStream, Charset.forName("UTF-8"));
             csvwriter = new CSVWriter(outputStreamWriter);
 
-            csvwriter.writeNext(new String[]{String.valueOf(period)});
             csvwriter.writeNext(new String[]{String.valueOf(this.references.size())});
             for (int i = 0; i < this.references.size(); i++) {
                 csvwriter.writeNext(new String[]{this.references.get(i).code.toString()});

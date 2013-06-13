@@ -13,6 +13,7 @@ import org.yccheok.jstock.gui.MainFrame;
 import org.yccheok.jstock.gui.AutoCompleteJComboBox;
 import org.yccheok.jstock.gui.Utils;
 import org.yccheok.jstock.cdr.CDRSettings;
+import org.yccheok.jstock.engine.StockHistoryServer;
 
 /**
  *
@@ -23,13 +24,14 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
     //private
     private AutoCompleteJComboBox stockComboBox;
     public CDRSettings settings = null;
+
     /**
      * Creates new form CDRSettingsJDialog
      */
     public CDRSettingsJDialog(java.awt.Frame parent, boolean modal) {
         super(parent, modal);
         initComponents();
-        this.stockComboBox = new AutoCompleteJComboBox();        
+        this.stockComboBox = new AutoCompleteJComboBox();
         this.stockComboBox.setEditable(true);
         this.stockComboBox.setPreferredSize(new java.awt.Dimension(150, 24));
         this.stockComboBox.attachStockInfoObserver(getStockInfoObserver());
@@ -39,26 +41,26 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
         this.jPanel1.add(Utils.getBusyJXLayer(this.stockComboBox));
         this.pack();
 
-        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();        
-        setBounds((screenSize.width-this.getSize().width)/2, (screenSize.height-this.getSize().height)/2, this.getSize().width, this.getSize().height);
-        
+        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
+        setBounds((screenSize.width - this.getSize().width) / 2, (screenSize.height - this.getSize().height) / 2, this.getSize().width, this.getSize().height);
+
         this.settings = CDRSettings.globalSettings.clone();
         this.jList1.setListData(this.settings.getList());
     }
-    
+
     public void dettachAllAndStopAutoCompleteJComboBox() {
         // We are no longer interest to receive any event from combo box.
-        ((AutoCompleteJComboBox)this.stockComboBox).dettachAll();
+        ((AutoCompleteJComboBox) this.stockComboBox).dettachAll();
         // Stop all threading activities in AutoCompleteJComboBox.
-        ((AutoCompleteJComboBox)this.stockComboBox).stop();
+        ((AutoCompleteJComboBox) this.stockComboBox).stop();
     }
-       
+
     @Override
-    public void dispose()
-    {
+    public void dispose() {
         this.dettachAllAndStopAutoCompleteJComboBox();
         super.dispose();
     }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
@@ -68,8 +70,6 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jLabel1 = new javax.swing.JLabel();
-        jComboBox1 = new javax.swing.JComboBox();
         jButton1 = new javax.swing.JButton();
         jButton2 = new javax.swing.JButton();
         jLabel2 = new javax.swing.JLabel();
@@ -82,15 +82,6 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
         java.util.ResourceBundle bundle = java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui"); // NOI18N
         setTitle(bundle.getString("CDRSettingsJDialog_Title")); // NOI18N
         setResizable(false);
-
-        jLabel1.setText(bundle.getString("CDRSettings_Label_Period")); // NOI18N
-
-        jComboBox1.setModel(new javax.swing.DefaultComboBoxModel(new String[] { "100", "200", "300" }));
-        jComboBox1.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                jComboBox1ActionPerformed(evt);
-            }
-        });
 
         jButton1.setText("OK");
         jButton1.addActionListener(new java.awt.event.ActionListener() {
@@ -137,38 +128,29 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
         getContentPane().setLayout(layout);
         layout.setHorizontalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+            .addGroup(layout.createSequentialGroup()
+                .addGap(26, 26, 26)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(layout.createSequentialGroup()
-                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addGap(224, 224, 224)
                         .addComponent(jButton4, javax.swing.GroupLayout.PREFERRED_SIZE, 69, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addGroup(layout.createSequentialGroup()
-                        .addGap(20, 28, Short.MAX_VALUE)
-                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel2)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addComponent(jLabel1)
-                                .addGap(31, 31, 31)
-                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addGroup(layout.createSequentialGroup()
-                                .addGap(142, 142, 142)
-                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 72, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                .addComponent(jButton2)))))
-                .addGap(27, 27, 27))
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(jLabel2)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(layout.createSequentialGroup()
+                            .addGap(142, 142, 142)
+                            .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 72, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                            .addComponent(jButton2))))
+                .addContainerGap(29, Short.MAX_VALUE))
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
-                .addGap(22, 22, 22)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel1)
-                    .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
+                .addGap(21, 21, 21)
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel2)
                     .addComponent(jPanel1, 30, 30, javax.swing.GroupLayout.PREFERRED_SIZE))
@@ -180,18 +162,13 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jButton1)
                     .addComponent(jButton2))
-                .addContainerGap(18, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jComboBox1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jComboBox1ActionPerformed
-        // TODO add your handling code here:
-    }//GEN-LAST:event_jComboBox1ActionPerformed
-
     private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
-        this.settings.period = Integer.parseInt(this.jComboBox1.getSelectedItem().toString());
         CDRSettings.globalSettings = this.settings;
         CDRSettings.globalSettings.save();
         this.dispose();
@@ -236,6 +213,7 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
 
         /* Create and display the dialog */
         java.awt.EventQueue.invokeLater(new Runnable() {
+            @Override
             public void run() {
                 CDRSettingsJDialog dialog = new CDRSettingsJDialog(new javax.swing.JFrame(), true);
                 dialog.addWindowListener(new java.awt.event.WindowAdapter() {
@@ -252,8 +230,6 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
     private javax.swing.JButton jButton1;
     private javax.swing.JButton jButton2;
     private javax.swing.JButton jButton4;
-    private javax.swing.JComboBox jComboBox1;
-    private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JList jList1;
     private javax.swing.JPanel jPanel1;
@@ -264,25 +240,28 @@ public class CDRSettingsJDialog extends javax.swing.JDialog {
         return new org.yccheok.jstock.engine.Observer<AutoCompleteJComboBox, StockInfo>() {
             @Override
             public void update(AutoCompleteJComboBox subject, StockInfo stockInfo) {
-                settings.addReference(stockInfo);                
+                settings.addReference(stockInfo);
+                StockHistoryServer history = MainFrame.getInstance().getStockHistoryServer(stockInfo.code);
+                if (history == null) {
+                    MainFrame.getInstance().getStockHistoryMonitor().addStockCode(stockInfo.code);
+                }
                 jList1.setListData(settings.getList());
                 jList1.updateUI();
             }
         };
     }
-    
+
     private Observer<AutoCompleteJComboBox, AjaxYahooSearchEngine.ResultType> getResultObserver() {
         return new org.yccheok.jstock.engine.Observer<AutoCompleteJComboBox, AjaxYahooSearchEngine.ResultType>() {
-
             @Override
             public void update(AutoCompleteJComboBox subject, AjaxYahooSearchEngine.ResultType resultType) {
-                assert(resultType != null);
+                assert (resultType != null);
                 // Symbol from Yahoo means Code in JStock.
                 final Code code = Code.newInstance(resultType.symbol);
                 // Name from Yahoo means Symbol in JStock.
                 final Symbol symbol = Symbol.newInstance(resultType.name);
                 StockInfo stockToAdd = StockInfo.newInstance(code, symbol);
-                
+
                 // Remember to update our offline database as well.
                 MainFrame.getInstance().addUserDefinedStockInfo(stockToAdd);
             }
