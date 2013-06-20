@@ -63,6 +63,8 @@ import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.time.TimeSeriesDataItem;
 import org.jfree.data.xy.*;
+import org.yccheok.jstock.cdr.CDRCalculator;
+import org.yccheok.jstock.cdr.CDRSettings;
 import org.yccheok.jstock.charting.ChartData;
 import org.yccheok.jstock.charting.MACD;
 import org.yccheok.jstock.charting.TechnicalAnalysis;
@@ -443,6 +445,7 @@ public class ChartJDialog extends javax.swing.JDialog {
         jMenuBar1 = new javax.swing.JMenuBar();
         jMenu1 = new javax.swing.JMenu();
         jMenuItem1 = new javax.swing.JMenuItem();
+        jMenuItem2 = new javax.swing.JMenuItem();
         jMenu2 = new javax.swing.JMenu();
         jMenu3 = new javax.swing.JMenu();
         jRadioButtonMenuItem1 = new javax.swing.JRadioButtonMenuItem();
@@ -595,13 +598,22 @@ public class ChartJDialog extends javax.swing.JDialog {
         });
         jMenu1.add(jMenuItem1);
 
+        jMenuItem2.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/16x16/filesave.png"))); // NOI18N
+        jMenuItem2.setText(bundle.getString("ChartJDialog_MenuItem_SaveCDR")); // NOI18N
+        jMenuItem2.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem2ActionPerformed(evt);
+            }
+        });
+        jMenu1.add(jMenuItem2);
+
         jMenuBar1.add(jMenu1);
 
         jMenu2.setText(bundle.getString("ChartJDialog_TechnicalAnalysis")); // NOI18N
         jMenu2.addMenuListener(new javax.swing.event.MenuListener() {
-            public void menuCanceled(javax.swing.event.MenuEvent evt) {
-            }
             public void menuDeselected(javax.swing.event.MenuEvent evt) {
+            }
+            public void menuCanceled(javax.swing.event.MenuEvent evt) {
             }
             public void menuSelected(javax.swing.event.MenuEvent evt) {
                 jMenu2MenuSelected(evt);
@@ -669,8 +681,8 @@ public class ChartJDialog extends javax.swing.JDialog {
 
         setJMenuBar(jMenuBar1);
 
-        java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
-        setBounds((screenSize.width-750)/2, (screenSize.height-600)/2, 750, 600);
+        setSize(new java.awt.Dimension(750, 600));
+        setLocationRelativeTo(null);
     }// </editor-fold>//GEN-END:initComponents
 
     private ComboBoxModel getComboBoxModel() {
@@ -1229,6 +1241,20 @@ public class ChartJDialog extends javax.swing.JDialog {
             org.yccheok.jstock.charting.Utils.applyChartThemeEx(candlestickChart);
         }
     }//GEN-LAST:event_jRadioButtonMenuItem4ActionPerformed
+
+    private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
+        assert (this.stockHistoryServer.size() > 0);
+        final Stock stock = this.stockHistoryServer.getStock(this.stockHistoryServer.getTimestamp(0));
+        
+        for (int i = 0; i < this.activeTAExs.size(); i++) {
+            final TAEx taEx = this.activeTAExs.get(i);
+            if (taEx.ta == TA.CDR) {
+                final int period = (Integer) taEx.parameter;
+                final File file = org.yccheok.jstock.gui.Utils.promptSaveCSVAndExcelJFileChooser("cdr_" + stock.code.toString() + "_" + period);
+                CDRCalculator.saveRegression(file, stockHistoryServer, CDRSettings.globalSettings, period);                
+            }
+        }
+    }//GEN-LAST:event_jMenuItem2ActionPerformed
    
     /**
      * Creates a chart.
@@ -2284,6 +2310,7 @@ public class ChartJDialog extends javax.swing.JDialog {
     private javax.swing.JMenu jMenu8;
     private javax.swing.JMenuBar jMenuBar1;
     private javax.swing.JMenuItem jMenuItem1;
+    private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem7;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;

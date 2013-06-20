@@ -388,9 +388,14 @@ public class TechnicalAnalysis {
             timestamps[i] = chartDatas.get(i).timestamp;
         }
                 
-        double[] residuals = CDRCalculator.regression(stockHistoryServer, CDRSettings.globalSettings, timestamps, period);
-        for (int i = 0; i < residuals.length; i++) {            
-            series.add(new Day(new Date(timestamps[i + period])), residuals[i]);
+        double[] cdr = CDRCalculator.regression(stockHistoryServer, CDRSettings.globalSettings, timestamps, period);
+        if (cdr == null) {
+            return new TimeSeriesCollection(series);
+        }
+        
+        assert(cdr.length + period + 1 == timestamps.length);
+        for (int i = 0; i < cdr.length; i++) {            
+            series.add(new Day(new Date(timestamps[i + period + 1])), cdr[i]);
         }
         
         return new TimeSeriesCollection(series);

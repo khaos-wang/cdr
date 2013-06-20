@@ -16,6 +16,7 @@ import java.nio.charset.Charset;
 import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.yccheok.jstock.engine.SimpleDate;
 import org.yccheok.jstock.engine.StockHistoryServer;
 import org.yccheok.jstock.engine.StockInfo;
 import org.yccheok.jstock.engine.StockInfoDatabase;
@@ -41,6 +42,7 @@ public class CDRSettings {
         return org.yccheok.jstock.gui.Utils.getUserDataDirectory() + jStockOptions.getCountry() + File.separator + "cdr" + File.separator;
     }
     public Vector<StockInfo> references = new Vector<StockInfo>();
+    public SimpleDate baseDate = new SimpleDate(2009, 0, 1);
 
     @Override
     public CDRSettings clone() {
