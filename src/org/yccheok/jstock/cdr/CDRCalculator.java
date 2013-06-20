@@ -39,7 +39,7 @@ public class CDRCalculator {
             }
         }
 
-        int length = timestamps.length - period - 1;
+        int length = timestamps.length - 1;
         if (length <= 0) {
             return null;
         }
@@ -72,9 +72,16 @@ public class CDRCalculator {
                 regression.newSampleData(data, period, nvars);
 //                double[] param = regression.estimateRegressionParameters();
                 double[] residuals = regression.estimateResiduals();
-                delta[i - period - 1] = residuals[residuals.length - 1];
+                assert(residuals.length == period);
+                if (i == period + 1) {
+                    for (int j = 0; j < i - 1; j++) {
+                        delta[j] = residuals[j];
+                    }
+                } else {
+                    delta[i - 1] = residuals[residuals.length - 1];
+                }
             } catch (Exception ex) {
-                delta[i - period - 1] = 0.0;
+                delta[i - 1] = 0.0;
             }
         }
 
@@ -100,9 +107,8 @@ public class CDRCalculator {
         int start = 1;
         for (; stockHistoryServer.getTimestamp(start) <= ts && start < stockHistoryServer.size(); ++start) {
         }
-
-        start = Math.max(start, period);
-        int length = stockHistoryServer.size() - start - 1;
+        
+        int length = stockHistoryServer.size() - start;
         if (length <= 0) {
             return;
         }
@@ -111,29 +117,41 @@ public class CDRCalculator {
         OutputStreamWriter outputStreamWriter = null;
         CSVWriter csvwriter = null;
 
+        int intercept = 1;
         try {
             fileOutputStream = new FileOutputStream(file);
             outputStreamWriter = new OutputStreamWriter(fileOutputStream, Charset.forName("UTF-8"));
             csvwriter = new CSVWriter(outputStreamWriter);
-            String[] fields = new String[6 + refHistoryServers.length];
+            String[] fields = new String[6 + refHistoryServers.length * 2 + intercept];
             fields[0] = "Date";
             fields[1] = "Close";
             for (int i = 0; i < refHistoryServers.length; i++) {
                 fields[2 + i] = refHistoryServers[i].getStock(refHistoryServers[i].getTimestamp(0)).code.toString();
             }
             fields[2 + refHistoryServers.length] = "Real";
-            fields[3 + refHistoryServers.length] = "Theory";
-            fields[4 + refHistoryServers.length] = "Delta";
-            fields[5 + refHistoryServers.length] = "CDR";
+            
+            if (intercept > 0) {
+                fields[3 + refHistoryServers.length] = "Intercept";
+            }
+            
+            for (int i = 0; i < refHistoryServers.length; i++) {
+                fields[3 + intercept + refHistoryServers.length + i] = "Beta of " + refHistoryServers[i].getStock(refHistoryServers[i].getTimestamp(0)).code.toString();
+            }
+            fields[3 + intercept + refHistoryServers.length * 2] = "Theory";
+            fields[4 + intercept + refHistoryServers.length * 2] = "Delta";
+            fields[5 + intercept + refHistoryServers.length * 2] = "CDR";
             csvwriter.writeNext(fields);
 
             int nvars = settings.references.size();
             long[] dates = new long[length];
             double[] delta = new double[length];
             double[] real = new double[length];
+            double[] params = new double[length * (refHistoryServers.length + intercept)];
             double[] cdr = new double[length];
 
-            for (int i = start + 1; i < stockHistoryServer.size(); i++) {
+            final int cdrStart = Math.max(start, period);
+            
+            for (int i = cdrStart + 1; i < stockHistoryServer.size(); i++) {
                 double[] data = new double[period * (nvars + 1)];
                 for (int k = 0; k < period; k++) {
                     final long timestamp1 = stockHistoryServer.getTimestamp(i + k + 1 - period);
@@ -154,13 +172,26 @@ public class CDRCalculator {
 
                 try {
                     AbstractMultipleLinearRegression regression = new OLSMultipleLinearRegression();
+                    regression.setNoIntercept(intercept == 0);
                     regression.newSampleData(data, period, nvars);
+                    double[] p = regression.estimateRegressionParameters();
+                    assert(p.length == refHistoryServers.length + (regression.isNoIntercept() ? 0 : 1));
                     double[] residuals = regression.estimateResiduals();
-                    dates[i - start - 1] = stockHistoryServer.getTimestamp(i);
-                    real[i - start - 1] = data[(period - 1) * (nvars + 1)];
-                    delta[i - start - 1] = residuals[residuals.length - 1];
+                    if (i == cdrStart + 1) {
+                        for (int j = cdrStart + 1; j > start - 1; j--) {
+                            dates[j - start] = stockHistoryServer.getTimestamp(j);
+                            real[j - start] = data[(j - cdrStart - 1 + period - 1) * (nvars + 1)];
+                            delta[j - start] = residuals[j - cdrStart - 1 + period - 1];
+                            System.arraycopy(p, 0, params, (j - start) * (refHistoryServers.length + intercept), refHistoryServers.length + intercept);
+                        }
+                    } else {
+                        dates[i - start] = stockHistoryServer.getTimestamp(i);
+                        real[i - start] = data[(period - 1) * (nvars + 1)];
+                        delta[i - start] = residuals[residuals.length - 1];
+                        System.arraycopy(p, 0, params, (i - start) * (refHistoryServers.length + intercept), refHistoryServers.length + intercept);
+                    }
                 } catch (Exception ex) {
-                    delta[i - start - 1] = 0.0;
+                    delta[i - start] = 0.0;
                 }
             }
                         
@@ -170,12 +201,13 @@ public class CDRCalculator {
             }
             
             for (int i = 0; i < cdr.length; i++) {
-                String[] row = new String[6 + refHistoryServers.length];
+                String[] row = new String[6 + refHistoryServers.length * 2 + intercept];
                 Calendar calendar = Calendar.getInstance();
                 calendar.setTimeInMillis(dates[i]);
                 
                 row[0] = String.format("%1$tY/%1$tm/%1td", calendar);
                 row[1] = String.valueOf(stockHistoryServer.getStock(dates[i]).getLastPrice());
+
                 for (int j = 0; j < refHistoryServers.length; j++) {
                     Stock ref = refHistoryServers[j].getStock(dates[i]);
                     if (ref == null) {
@@ -186,9 +218,14 @@ public class CDRCalculator {
                 }
                 
                 row[2 + refHistoryServers.length] = String.valueOf(real[i]);
-                row[3 + refHistoryServers.length] = String.valueOf(real[i] - delta[i]);
-                row[4 + refHistoryServers.length] = String.valueOf(delta[i]);
-                row[5 + refHistoryServers.length] = String.valueOf(cdr[i]);
+                
+                for (int j = 0; j < refHistoryServers.length + intercept; j++) {
+                    row[3 + refHistoryServers.length + j] = String.valueOf(params[i * (refHistoryServers.length + intercept) + j]);
+                }
+
+                row[3 + refHistoryServers.length * 2 + intercept] = String.valueOf(real[i] - delta[i]);
+                row[4 + refHistoryServers.length * 2 + intercept] = String.valueOf(delta[i]);
+                row[5 + refHistoryServers.length * 2 + intercept] = String.valueOf(cdr[i]);
                 csvwriter.writeNext(row);
             }
             

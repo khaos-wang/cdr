@@ -393,9 +393,9 @@ public class TechnicalAnalysis {
             return new TimeSeriesCollection(series);
         }
         
-        assert(cdr.length + period + 1 == timestamps.length);
+        assert(cdr.length + 1 == timestamps.length);
         for (int i = 0; i < cdr.length; i++) {            
-            series.add(new Day(new Date(timestamps[i + period + 1])), cdr[i]);
+            series.add(new Day(new Date(timestamps[i + 1])), cdr[i]);
         }
         
         return new TimeSeriesCollection(series);
