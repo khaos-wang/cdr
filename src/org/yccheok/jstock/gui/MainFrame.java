@@ -16,7 +16,6 @@
  * with this program; if not, write to the Free Software Foundation, Inc.,
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-
 package org.yccheok.jstock.gui;
 
 import org.yccheok.jstock.gui.charting.ChartJDialog;
@@ -41,12 +40,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.mail.MessagingException;
 import javax.mail.internet.AddressException;
 import org.yccheok.jstock.alert.SMSLimiter;
 import org.yccheok.jstock.analysis.Indicator;
 import org.yccheok.jstock.analysis.OperatorIndicator;
+import org.yccheok.jstock.cdr.CDRCalculator;
+import org.yccheok.jstock.cdr.CDRSettings;
 import org.yccheok.jstock.engine.AjaxYahooSearchEngine.ResultType;
 import org.yccheok.jstock.engine.Stock.Board;
 import org.yccheok.jstock.engine.Stock.Industry;
@@ -67,33 +70,36 @@ import org.yccheok.jstock.watchlist.WatchlistInfo;
 
 /**
  *
- * @author  doraemon
+ * @author doraemon
  */
 public class MainFrame extends javax.swing.JFrame {
 
     public static final class CSVWatchlist {
+
         public final TableModel tableModel;
-        
+
         private CSVWatchlist(TableModel tableModel) {
             if (tableModel == null) {
                 throw new java.lang.IllegalArgumentException();
             }
             this.tableModel = tableModel;
         }
-        
+
         public static CSVWatchlist newInstance(TableModel tableModel) {
             return new CSVWatchlist(tableModel);
         }
     }
-    
-    // Comment out, to avoid annoying log messages during debugging.
-    static { System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog"); }
-    
-    /** Creates new form MainFrame */
 
+    // Comment out, to avoid annoying log messages during debugging.
+    static {
+        System.setProperty("org.apache.commons.logging.Log", "org.apache.commons.logging.impl.NoOpLog");
+    }
+
+    /**
+     * Creates new form MainFrame
+     */
     // Private constructor is sufficient to suppress unauthorized calls to the constructor
-    private MainFrame()
-    {
+    private MainFrame() {
     }
 
     /**
@@ -103,17 +109,13 @@ public class MainFrame extends javax.swing.JFrame {
 
         try {
             UIManager.setLookAndFeel(getJStockOptions().getLooknFeel());
-        }
-        catch (java.lang.ClassNotFoundException exp) {
+        } catch (java.lang.ClassNotFoundException exp) {
             log.error(null, exp);
-        }
-        catch (java.lang.InstantiationException exp) {
+        } catch (java.lang.InstantiationException exp) {
             log.error(null, exp);
-        }
-        catch (java.lang.IllegalAccessException exp) {
+        } catch (java.lang.IllegalAccessException exp) {
             log.error(null, exp);
-        }
-        catch (javax.swing.UnsupportedLookAndFeelException exp) {
+        } catch (javax.swing.UnsupportedLookAndFeelException exp) {
             log.error(null, exp);
         }
 
@@ -153,10 +155,10 @@ public class MainFrame extends javax.swing.JFrame {
         this.initBrokingFirmLogos();
         this.initGUIOptions();
         this.initChartJDialogOptions();
-        this.initLanguageMenuItemsSelection();        
+        this.initLanguageMenuItemsSelection();
         this.initJXLayerOnJComboBox();
         this.initKeyBindings();
-        
+
         // Turn to the last viewed page.
         final int lastSelectedPageIndex = this.getJStockOptions().getLastSelectedPageIndex();
         if (this.jTabbedPane1.getTabCount() > lastSelectedPageIndex) {
@@ -183,17 +185,16 @@ public class MainFrame extends javax.swing.JFrame {
                 this.setBounds(boundsEx.bounds);
             }
         }
-        
+
         installShutdownHook();
-        
+
         // Spain no longer supported. Sad...
         if (this.jStockOptions.getCountry() == Country.Spain) {
             JOptionPane.showMessageDialog(
-                null, 
-                MessagesBundle.getString("info_message_spain_not_supported"), 
-                MessagesBundle.getString("info_title_spain_not_supported"), 
-                JOptionPane.INFORMATION_MESSAGE
-            );
+                    null,
+                    MessagesBundle.getString("info_message_spain_not_supported"),
+                    MessagesBundle.getString("info_title_spain_not_supported"),
+                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 
@@ -208,25 +209,25 @@ public class MainFrame extends javax.swing.JFrame {
         getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(portfolioNavigationKeyStroke, "portfolioNavigation");
         getRootPane().getActionMap().put("watchlistNavigation", new AbstractAction() {
             @Override
-            public void actionPerformed( ActionEvent e ) {
+            public void actionPerformed(ActionEvent e) {
                 watchlistNavigation();
             }
         });
         getRootPane().getActionMap().put("portfolioNavigation", new AbstractAction() {
             @Override
-            public void actionPerformed( ActionEvent e ) {
+            public void actionPerformed(ActionEvent e) {
                 portfolioNavigation();
             }
-        });        
+        });
     }
-    
+
     private void watchlistNavigation() {
         if (this.getSelectedComponent() != this.jPanel8) {
             // The page is not active. Make it active.
             MainFrame.this.jTabbedPane1.setSelectedIndex(0);
             return;
         }
-        
+
         final java.util.List<String> watchlistNames = org.yccheok.jstock.watchlist.Utils.getWatchlistNames();
         final int size = watchlistNames.size();
         if (size <= 1) {
@@ -234,45 +235,49 @@ public class MainFrame extends javax.swing.JFrame {
             return;
         }
         final String currentWatchlistName = this.getJStockOptions().getWatchlistName();
-        
+
         int index = 0;
-        
+
         for (; index < size; index++) {
             if (watchlistNames.get(index).equals(currentWatchlistName)) {
                 index++;
-                if (index >= size) index = 0;
+                if (index >= size) {
+                    index = 0;
+                }
                 break;
             }
         }
         this.selectActiveWatchlist(watchlistNames.get(index));
     }
-    
+
     private void portfolioNavigation() {
         if (this.getSelectedComponent() != this.portfolioManagementJPanel) {
             // The page is not active. Make it active.
             MainFrame.this.jTabbedPane1.setSelectedIndex(3);
             return;
         }
-        
+
         final java.util.List<String> portfolioNames = org.yccheok.jstock.portfolio.Utils.getPortfolioNames();
         final int size = portfolioNames.size();
         if (size <= 1) {
             // Nothing to navigate.
             return;
-        }        
+        }
         final String currentPortfolioName = this.getJStockOptions().getPortfolioName();
-        
-        int index = 0;        
+
+        int index = 0;
         for (; index < size; index++) {
             if (portfolioNames.get(index).equals(currentPortfolioName)) {
                 index++;
-                if (index >= size) index = 0;
+                if (index >= size) {
+                    index = 0;
+                }
                 break;
             }
         }
         this.selectActivePortfolio(portfolioNames.get(index));
     }
-    
+
     // Register a hook to save app settings when quit via the app menu.
     // This is in Mac OSX only.   
     // http://sourceforge.net/tracker/?func=detail&aid=3490453&group_id=202896&atid=983418
@@ -284,7 +289,7 @@ public class MainFrame extends javax.swing.JFrame {
                     if (isFormWindowClosedCalled) {
                         return;
                     }
-                    
+
                     // Always be the first statement. As no matter what happen, we must
                     // save all the configuration files.
                     MainFrame.this.save();
@@ -294,9 +299,9 @@ public class MainFrame extends javax.swing.JFrame {
                         // Save it to disk.
                         MainFrame.this.saveUserDefinedDatabaseAsCSV(jStockOptions.getCountry(), stockInfoDatabase);
                     }
-                    
+
                     // Do not access any GUI related task in this runnable.
-                    
+
                     AppLock.unlock();
                 }
             };
@@ -311,7 +316,7 @@ public class MainFrame extends javax.swing.JFrame {
             Runtime.getRuntime().addShutdownHook(new Thread(runner, "Window Prefs Hook"));
         }
     }
-    
+
     /**
      * Initialize language menu items so that correct item is being selected
      * according to current default locale.
@@ -335,16 +340,18 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     /**
-     * MainFrameHolder is loaded on the first execution of Singleton.getInstance()
-     * or the first access to MainFrameHolder.INSTANCE, not before.
+     * MainFrameHolder is loaded on the first execution of
+     * Singleton.getInstance() or the first access to MainFrameHolder.INSTANCE,
+     * not before.
      */
     private static class MainFrameHolder {
+
         private final static MainFrame INSTANCE = new MainFrame();
     }
 
     /**
      * Returns MainFrame as singleton.
-     * 
+     *
      * @return MainFrame as singleton
      */
     public static MainFrame getInstance() {
@@ -355,13 +362,13 @@ public class MainFrame extends javax.swing.JFrame {
     // It is used to display busy indicator.
     private void initJXLayerOnJComboBox() {
         // Add the layer as usual combo box.
-        jPanel1.add(Utils.getBusyJXLayer((AutoCompleteJComboBox)this.jComboBox1));
+        jPanel1.add(Utils.getBusyJXLayer((AutoCompleteJComboBox) this.jComboBox1));
     }
 
-    /** This method is called from within the constructor to
-     * initialize the form.
-     * WARNING: Do NOT modify this code. The content of this method is
-     * always regenerated by the Form Editor.
+    /**
+     * This method is called from within the constructor to initialize the form.
+     * WARNING: Do NOT modify this code. The content of this method is always
+     * regenerated by the Form Editor.
      */
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -384,6 +391,7 @@ public class MainFrame extends javax.swing.JFrame {
         jMenu3 = new javax.swing.JMenu();
         jMenuItem2 = new javax.swing.JMenuItem();
         jMenuItem9 = new javax.swing.JMenuItem();
+        jMenuItem18 = new javax.swing.JMenuItem();
         jSeparator2 = new javax.swing.JSeparator();
         jMenuItem11 = new javax.swing.JMenuItem();
         jMenuItem10 = new javax.swing.JMenuItem();
@@ -532,6 +540,15 @@ public class MainFrame extends javax.swing.JFrame {
             }
         });
         jMenu3.add(jMenuItem9);
+
+        jMenuItem18.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/16x16/filesave.png"))); // NOI18N
+        jMenuItem18.setText(bundle.getString("MainFrame_Save_CDR_For_All")); // NOI18N
+        jMenuItem18.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                jMenuItem18ActionPerformed(evt);
+            }
+        });
+        jMenu3.add(jMenuItem18);
         jMenu3.add(jSeparator2);
 
         jMenuItem11.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/16x16/download_from_cloud.png"))); // NOI18N
@@ -660,24 +677,24 @@ public class MainFrame extends javax.swing.JFrame {
 
         jMenu9.setText(bundle.getString("MainFrame_Watchlist")); // NOI18N
         jMenu9.addMenuListener(new javax.swing.event.MenuListener() {
-            public void menuDeselected(javax.swing.event.MenuEvent evt) {
-            }
             public void menuCanceled(javax.swing.event.MenuEvent evt) {
             }
             public void menuSelected(javax.swing.event.MenuEvent evt) {
                 jMenu9MenuSelected(evt);
+            }
+            public void menuDeselected(javax.swing.event.MenuEvent evt) {
             }
         });
         jMenuBar2.add(jMenu9);
 
         jMenu8.setText(bundle.getString("MainFrame_Portfolio")); // NOI18N
         jMenu8.addMenuListener(new javax.swing.event.MenuListener() {
-            public void menuDeselected(javax.swing.event.MenuEvent evt) {
-            }
             public void menuCanceled(javax.swing.event.MenuEvent evt) {
             }
             public void menuSelected(javax.swing.event.MenuEvent evt) {
                 jMenu8MenuSelected(evt);
+            }
+            public void menuDeselected(javax.swing.event.MenuEvent evt) {
             }
         });
         jMenuBar2.add(jMenu8);
@@ -778,7 +795,7 @@ public class MainFrame extends javax.swing.JFrame {
             javax.swing.JOptionPane.showMessageDialog(this, java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/messages").getString("info_message_we_havent_connected_to_stock_server"), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/messages").getString("info_title_we_havent_connected_to_stock_server"), javax.swing.JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        
+
         StockJDialog stockJDialog = new StockJDialog(this, true);
         stockJDialog.setLocationRelativeTo(this);
         stockJDialog.setVisible(true);
@@ -794,10 +811,10 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     public boolean openAsStatements(Statements statements, File file) {
-        assert(statements != null);
-        
+        assert (statements != null);
+
         final GUIBundleWrapper guiBundleWrapper = statements.getGUIBundleWrapper();
-        
+
         if (statements.getType() == Statement.Type.RealtimeInfo) {
             final int size = statements.size();
             for (int i = 0; i < size; i++) {
@@ -839,7 +856,7 @@ public class MainFrame extends javax.swing.JFrame {
         }
         return true;
     }
-    
+
     private boolean openAsExcelFile(File file) {
         final java.util.List<Statements> statementsList = Statements.newInstanceFromExcelFile(file);
         boolean status = statementsList.size() > 0;
@@ -852,7 +869,7 @@ public class MainFrame extends javax.swing.JFrame {
     public RealTimeStockMonitor getRealTimeStockMonitor() {
         return realTimeStockMonitor;
     }
-    
+
     private void jMenuItem2ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem2ActionPerformed
         final File file = Utils.promptOpenCSVAndExcelJFileChooser();
         if (file == null) {
@@ -862,27 +879,21 @@ public class MainFrame extends javax.swing.JFrame {
         if (Utils.getFileExtension(file).equals("xls")) {
             if (this.getSelectedComponent() == this.jPanel8) {
                 status = this.openAsExcelFile(file);
-            }
-            else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
+            } else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
                 status = this.portfolioManagementJPanel.openAsExcelFile(file);
+            } else {
+                assert (false);
             }
-            else {
-                assert(false);
-            }
-        }
-        else if(Utils.getFileExtension(file).equals("csv")) {
+        } else if (Utils.getFileExtension(file).equals("csv")) {
             if (this.getSelectedComponent() == this.jPanel8) {
                 status = this.openAsCSVFile(file);
-            }
-            else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
+            } else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
                 status = this.portfolioManagementJPanel.openAsCSVFile(file);
+            } else {
+                assert (false);
             }
-            else {
-                assert(false);
-            }
-        }
-        else {
-            assert(false);
+        } else {
+            assert (false);
         }
 
         if (false == status) {
@@ -899,31 +910,28 @@ public class MainFrame extends javax.swing.JFrame {
             this.jMenuItem4.setEnabled(true);   // Add Stocks...
             this.jMenuItem7.setEnabled(true);   // Clear All Stocks...
             this.jMenuItem15.setEnabled(true);  // Refresh Stock Prices
-            
+
             requestFocusOnJComboBox();
-        }
-        else if (pane.getSelectedComponent() == this.indicatorPanel) {
+        } else if (pane.getSelectedComponent() == this.indicatorPanel) {
             this.jMenuItem2.setEnabled(false);  // Load
             this.jMenuItem9.setEnabled(false);  // Save
             this.jMenuItem4.setEnabled(false);  // Add Stocks...
             this.jMenuItem7.setEnabled(false);  // Clear All Stocks...
             this.jMenuItem15.setEnabled(false); // Refresh Stock Prices
-        }
-        else if(pane.getSelectedComponent() == this.indicatorScannerJPanel) {
+        } else if (pane.getSelectedComponent() == this.indicatorScannerJPanel) {
             this.jMenuItem2.setEnabled(false);  // Load
             this.jMenuItem9.setEnabled(true);   // Save
             this.jMenuItem4.setEnabled(false);  // Add Stocks...
             this.jMenuItem7.setEnabled(false);  // Clear All Stocks...
             this.jMenuItem15.setEnabled(true);  // Refresh Stock Prices            
-        }
-        else if(pane.getSelectedComponent() == this.portfolioManagementJPanel) {
+        } else if (pane.getSelectedComponent() == this.portfolioManagementJPanel) {
             this.jMenuItem2.setEnabled(true);   // Load
             this.jMenuItem9.setEnabled(true);   // Save
             this.jMenuItem4.setEnabled(false);  // Add Stocks...
             this.jMenuItem7.setEnabled(false);  // Clear All Stocks...
             this.jMenuItem15.setEnabled(true);  // Refresh Stock Prices            
-        }   
-        
+        }
+
         if (this.isStatusBarBusy == false) {
             this.setStatusBar(false, this.getBestStatusBarMessage());
         }
@@ -936,10 +944,9 @@ public class MainFrame extends javax.swing.JFrame {
     //
     private void jTabbedPane1StateChanged(javax.swing.event.ChangeEvent evt) {//GEN-FIRST:event_jTabbedPane1StateChanged
         // TODO add your handling code here:
-        JTabbedPane pane = (JTabbedPane)evt.getSource();
+        JTabbedPane pane = (JTabbedPane) evt.getSource();
         handleJTabbedPaneStateChanged(pane);
     }//GEN-LAST:event_jTabbedPane1StateChanged
-
 
     private void jMenuItem6ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem6ActionPerformed
         OptionsJDialog optionsJDialog = new OptionsJDialog(this, true);
@@ -950,6 +957,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     /**
      * Returns JStock options of this main frame.
+     *
      * @return JStock options of this main frame
      */
     public JStockOptions getJStockOptions() {
@@ -958,6 +966,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     /**
      * Returns the chart dialog options of this main frame.
+     *
      * @return the chart dialog options of this main frame
      */
     public ChartJDialogOptions getChartJDialogOptions() {
@@ -974,7 +983,7 @@ public class MainFrame extends javax.swing.JFrame {
         // Save current window size and position.
         JStockOptions.BoundsEx boundsEx = new JStockOptions.BoundsEx(this.getBounds(), this.getExtendedState());
         this.getJStockOptions().setBoundsEx(boundsEx);
-        
+
         // So that later we know that this XML file is saved by which version of
         // JStock.
         jStockOptions.setApplicationVersionID(Utils.getApplicationVersionID());
@@ -989,14 +998,14 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     /**
-     * Dettach all and stop Ajax threading activity in combo box. Once stop, 
+     * Dettach all and stop Ajax threading activity in combo box. Once stop,
      * this combo box can no longer be reused.
      */
     private void dettachAllAndStopAutoCompleteJComboBox() {
         // We are no longer interest to receive any event from combo box.
-        ((AutoCompleteJComboBox)this.jComboBox1).dettachAll();
+        ((AutoCompleteJComboBox) this.jComboBox1).dettachAll();
         // Stop all threading activities in AutoCompleteJComboBox.
-        ((AutoCompleteJComboBox)this.jComboBox1).stop();
+        ((AutoCompleteJComboBox) this.jComboBox1).stop();
     }
 
     // windowClosing
@@ -1011,7 +1020,7 @@ public class MainFrame extends javax.swing.JFrame {
      */
     private void formWindowClosed(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosed
         isFormWindowClosedCalled = true;
-        
+
         try {
             // Always be the first statement. As no matter what happen, we must
             // save all the configuration files.
@@ -1029,14 +1038,13 @@ public class MainFrame extends javax.swing.JFrame {
                 SystemTray.getSystemTray().remove(_trayIcon);
                 trayIcon = null;
             }
-            
+
             dettachAllAndStopAutoCompleteJComboBox();
             this.indicatorPanel.dettachAllAndStopAutoCompleteJComboBox();
-            
+
             log.info("latestNewsTask stop...");
 
-            if (this.latestNewsTask != null)
-            {
+            if (this.latestNewsTask != null) {
                 this.latestNewsTask.cancel(true);
             }
 
@@ -1047,8 +1055,7 @@ public class MainFrame extends javax.swing.JFrame {
             // MultiThreadedHttpConnectionManager.shutdownAll();
 
             log.info("Widnow is closed.");
-        }
-        catch (Exception exp) {
+        } catch (Exception exp) {
             log.error("Unexpected error while trying to quit application", exp);
         }
 
@@ -1075,8 +1082,7 @@ public class MainFrame extends javax.swing.JFrame {
         // We have no solution at current moment.
         //
 
-        if (Utils.isWindows())
-        {
+        if (Utils.isWindows()) {
             this.setVisible(false);
         }
     }//GEN-LAST:event_formWindowIconified
@@ -1093,15 +1099,14 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_formMouseClicked
 
     private void updateDynamicChart(Stock stock) {
-        assert(java.awt.EventQueue.isDispatchThread());
+        assert (java.awt.EventQueue.isDispatchThread());
 
         DynamicChart dynamicChart = stock != null ? this.dynamicCharts.get(stock.code) : MainFrame.EMPTY_DYNAMIC_CHART;
         if (dynamicChart == null) {
             dynamicChart = MainFrame.EMPTY_DYNAMIC_CHART;
         }
 
-        if (java.util.Arrays.asList(jPanel3.getComponents()).contains(dynamicChart.getChartPanel()))
-        {
+        if (java.util.Arrays.asList(jPanel3.getComponents()).contains(dynamicChart.getChartPanel())) {
             return;
         }
 
@@ -1121,14 +1126,14 @@ public class MainFrame extends javax.swing.JFrame {
             this.deteleSelectedTableRow();
             return;
         }
-        
+
         if (evt.isActionKey()) {
             int[] rows = MainFrame.this.jTable1.getSelectedRows();
-            
+
             if (rows.length == 1) {
                 int row = rows[0];
-                
-                final StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+
+                final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
                 final int modelIndex = jTable1.convertRowIndexToModel(row);
                 final Stock stock = tableModel.getStock(modelIndex);
                 this.updateDynamicChart(stock);
@@ -1141,7 +1146,7 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_jTable1KeyPressed
 
     private void formWindowClosing(java.awt.event.WindowEvent evt) {//GEN-FIRST:event_formWindowClosing
-        log.info("Widnow is closing.");     
+        log.info("Widnow is closing.");
     }//GEN-LAST:event_formWindowClosing
 
     private void jMenuItem8ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem8ActionPerformed
@@ -1158,12 +1163,12 @@ public class MainFrame extends javax.swing.JFrame {
         StockDatabaseJDialog stockDatabaseJDialog = new StockDatabaseJDialog(this, stock_info_database, true);
         stockDatabaseJDialog.setSize(540, 540);
         stockDatabaseJDialog.setLocationRelativeTo(this);
-        stockDatabaseJDialog.setVisible(true); 
+        stockDatabaseJDialog.setVisible(true);
 
         if (stockDatabaseJDialog.getResult() != null) {
-            assert(stockDatabaseJDialog.getResult() == this.stockInfoDatabase);
+            assert (stockDatabaseJDialog.getResult() == this.stockInfoDatabase);
             this.stockInfoDatabase = stockDatabaseJDialog.getResult();
-            ((AutoCompleteJComboBox)jComboBox1).setStockInfoDatabase(this.stockInfoDatabase);
+            ((AutoCompleteJComboBox) jComboBox1).setStockInfoDatabase(this.stockInfoDatabase);
             indicatorPanel.setStockInfoDatabase(this.stockInfoDatabase);
             log.info("saveStockCodeAndSymbolDatabase...");
             saveDatabase();
@@ -1175,70 +1180,54 @@ public class MainFrame extends javax.swing.JFrame {
 
         if (this.getSelectedComponent() == this.jPanel8) {
             suggestedFileName = GUIBundle.getString("MainFrame_Title");
-        }
-        else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
+        } else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
             suggestedFileName = GUIBundle.getString("IndicatorScannerJPanel_Title");
-        }
-        else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
+        } else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
             suggestedFileName = GUIBundle.getString("PortfolioManagementJPanel_Title");
-        }
-        else {
-            assert(false);
+        } else {
+            assert (false);
         }
 
         boolean status = true;
         File file = null;
         if (this.getSelectedComponent() == this.jPanel8 || this.getSelectedComponent() == this.indicatorScannerJPanel) {
             file = Utils.promptSaveCSVAndExcelJFileChooser(suggestedFileName);
-            if (file != null) {                
-                if (Utils.getFileExtension(file).equals("csv"))
-                {
+            if (file != null) {
+                if (Utils.getFileExtension(file).equals("csv")) {
                     if (this.getSelectedComponent() == this.jPanel8) {
                         status = this.saveAsCSVFile(file, false);
-                    }
-                    else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
+                    } else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
                         status = this.indicatorScannerJPanel.saveAsCSVFile(file);
+                    } else {
+                        assert (false);
                     }
-                    else {
-                        assert(false);
-                    }
-                }
-                else if (Utils.getFileExtension(file).equals("xls"))
-                {
+                } else if (Utils.getFileExtension(file).equals("xls")) {
                     if (this.getSelectedComponent() == this.jPanel8) {
                         status = this.saveAsExcelFile(file);
-                    }
-                    else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
+                    } else if (this.getSelectedComponent() == this.indicatorScannerJPanel) {
                         status = this.indicatorScannerJPanel.saveAsExcelFile(file);
-                    }
-                    else {
-                        assert(false);
+                    } else {
+                        assert (false);
                     }
                 }
             }
-        }
-        else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
+        } else if (this.getSelectedComponent() == this.portfolioManagementJPanel) {
             final Utils.FileEx fileEx = Utils.promptSavePortfolioCSVAndExcelJFileChooser(suggestedFileName);
             if (fileEx != null) {
                 file = fileEx.file;
-                if (Utils.getFileExtension(fileEx.file).equals("csv"))
-                {
+                if (Utils.getFileExtension(fileEx.file).equals("csv")) {
                     status = this.portfolioManagementJPanel.saveAsCSVFile(fileEx, false);
-                }
-                else if (Utils.getFileExtension(fileEx.file).equals("xls"))
-                {
+                } else if (Utils.getFileExtension(fileEx.file).equals("xls")) {
                     status = this.portfolioManagementJPanel.saveAsExcelFile(fileEx.file, false);
                 }
             }
+        } else {
+            assert (false);
         }
-        else {
-            assert(false);
-        }
-        if (false == status)
-        {
+        if (false == status) {
             // file will never become null, if status had been changed from true
             // to false.
-            assert(file != null);
+            assert (file != null);
             final String output = MessageFormat.format(MessagesBundle.getString("error_message_nothing_to_be_saved_template"), file.getName());
             JOptionPane.showMessageDialog(this, output, MessagesBundle.getString("error_title_nothing_to_be_saved"), JOptionPane.ERROR_MESSAGE);
         }
@@ -1255,12 +1244,11 @@ public class MainFrame extends javax.swing.JFrame {
             mi.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    final String s = ((JRadioButtonMenuItem)e.getSource()).getText();
+                    final String s = ((JRadioButtonMenuItem) e.getSource()).getText();
                     if (false == s.equals(currentPortfolioName)) {
                         MainFrame.this.selectActivePortfolio(s);
                     }
                 }
-
             });
             mi.setSelected(portfolioName.equals(currentPortfolioName));
         }
@@ -1272,7 +1260,6 @@ public class MainFrame extends javax.swing.JFrame {
             public void actionPerformed(ActionEvent e) {
                 multiplePortfolios();
             }
-
         });
         jMenu8.add(mi);
     }//GEN-LAST:event_jMenu8MenuSelected
@@ -1292,22 +1279,21 @@ public class MainFrame extends javax.swing.JFrame {
     }//GEN-LAST:event_jMenuItem3ActionPerformed
 
     private void jMenu9MenuSelected(javax.swing.event.MenuEvent evt) {//GEN-FIRST:event_jMenu9MenuSelected
-        this.jMenu9.removeAll();        
+        this.jMenu9.removeAll();
         final java.util.List<String> watchlistNames = org.yccheok.jstock.watchlist.Utils.getWatchlistNames();
         final String currentWatchlistName = this.getJStockOptions().getWatchlistName();
         final javax.swing.ButtonGroup buttonGroup = new javax.swing.ButtonGroup();
         for (String watchlistName : watchlistNames) {
-            final JMenuItem mi = (JRadioButtonMenuItem)this.jMenu9.add(new JRadioButtonMenuItem(watchlistName));
+            final JMenuItem mi = (JRadioButtonMenuItem) this.jMenu9.add(new JRadioButtonMenuItem(watchlistName));
             buttonGroup.add(mi);
             mi.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    final String s = ((JRadioButtonMenuItem)e.getSource()).getText();
+                    final String s = ((JRadioButtonMenuItem) e.getSource()).getText();
                     if (false == s.equals(currentWatchlistName)) {
                         MainFrame.this.selectActiveWatchlist(s);
                     }
                 }
-
             });
             mi.setSelected(watchlistName.equals(currentWatchlistName));
         }
@@ -1319,7 +1305,6 @@ public class MainFrame extends javax.swing.JFrame {
             public void actionPerformed(ActionEvent e) {
                 multipleWatchlists();
             }
-
         });
         this.jMenu9.add(mi);
     }//GEN-LAST:event_jMenu9MenuSelected
@@ -1353,7 +1338,7 @@ public class MainFrame extends javax.swing.JFrame {
             //
             return;
         }
-        
+
         // Avoid from Confirm Dialog to pop up when user change to same language (i.e. english)
         if (false == this.jStockOptions.getLocale().getLanguage().equals(Locale.ENGLISH.getLanguage())) {
             // Do not suprise user with sudden restart. Ask for their permission to do so.
@@ -1455,7 +1440,7 @@ public class MainFrame extends javax.swing.JFrame {
     private void jMenuItem13ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem13ActionPerformed
         Utils.launchWebBrowser(org.yccheok.jstock.network.Utils.getURL(org.yccheok.jstock.network.Utils.Type.DONATE_HTML));
     }//GEN-LAST:event_jMenuItem13ActionPerformed
-    
+
     private void jMenuItem14ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem14ActionPerformed
         Utils.launchWebBrowser(org.yccheok.jstock.network.Utils.getURL(org.yccheok.jstock.network.Utils.Type.CONTRIBUTE_HTML));
     }//GEN-LAST:event_jMenuItem14ActionPerformed
@@ -1502,14 +1487,51 @@ public class MainFrame extends javax.swing.JFrame {
         CDRSettingsJDialog cdr = new CDRSettingsJDialog(this, true);
         cdr.setVisible(true);
     }//GEN-LAST:event_jMenuItem17ActionPerformed
-    
+
+    private void jMenuItem18ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jMenuItem18ActionPerformed
+        try {
+            //check if all references' histories are ready
+            for (StockInfo ref : CDRSettings.globalSettings.references) {
+                StockHistoryServer history = this.getStockHistoryServer(ref.code);
+                if (history == null) {
+                    getStockHistoryMonitor().addStockCode(ref.code);
+
+                    while (history == null) {
+                        Thread.sleep(1000);
+                        history = this.getStockHistoryServer(ref.code);
+                    }
+                }
+            }
+
+            java.util.List<StockInfo> stocks = this.getStockInfoDatabase().getStockInfos();
+            final String cdrDirectory = Utils.getCDRDirectory();
+            int period = 300;
+            for (StockInfo stock : stocks) {
+                final File file = new File(cdrDirectory + File.separator + "cdr_" + stock.code.toString() + "_" + period + ".csv");
+                StockHistoryServer history = this.getStockHistoryServer(stock.code);
+                if (history == null) {                    
+                    getStockHistoryMonitor().addStockCode(stock.code);
+
+                    while (history == null) {
+                        Thread.sleep(1000);
+                        history = this.getStockHistoryServer(stock.code);
+                    }
+                }
+
+                CDRCalculator.saveRegression(file, history, CDRSettings.globalSettings, period);
+            }
+        } catch (InterruptedException ex) {
+            Logger.getLogger(MainFrame.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }//GEN-LAST:event_jMenuItem18ActionPerformed
+
     /**
      * Activate specified watchlist.
      *
      * @param watchlist Watchlist name
      */
     public void selectActiveWatchlist(String watchlist) {
-        assert(SwingUtilities.isEventDispatchThread());
+        assert (SwingUtilities.isEventDispatchThread());
         // Save current watchlist.
         MainFrame.this.saveWatchlist();
         // Save current GUI options.
@@ -1533,7 +1555,7 @@ public class MainFrame extends javax.swing.JFrame {
      * @param portfolio Portfolio name
      */
     public void selectActivePortfolio(String portfolio) {
-        assert(SwingUtilities.isEventDispatchThread());
+        assert (SwingUtilities.isEventDispatchThread());
         // Save current portfolio.
         MainFrame.this.portfolioManagementJPanel.savePortfolio();
         // Save current GUI options.
@@ -1544,7 +1566,7 @@ public class MainFrame extends javax.swing.JFrame {
         // I guess user wants to watch the current active portfolio right now.
         // We will help him to turn to the portfolio page.
         MainFrame.this.jTabbedPane1.setSelectedIndex(3);
-        
+
         MainFrame.this.portfolioManagementJPanel.updateTitledBorder();
 
         // No matter how, just stop progress bar, and display best message.
@@ -1562,13 +1584,13 @@ public class MainFrame extends javax.swing.JFrame {
         portfolioJDialog.setLocationRelativeTo(this);
         portfolioJDialog.setVisible(true);
     }
-    
+
     private static boolean saveAsCSVFile(CSVWatchlist csvWatchlist, File file, boolean languageIndependent) {
         final org.yccheok.jstock.file.Statements statements = org.yccheok.jstock.file.Statements.newInstanceFromTableModel(csvWatchlist.tableModel, languageIndependent);
-        assert(statements != null);
+        assert (statements != null);
         return statements.saveAsCSVFile(file);
-    }    
-    
+    }
+
     private boolean saveAsCSVFile(File file, boolean languageIndependent) {
         final TableModel tableModel = jTable1.getModel();
         CSVWatchlist csvWatchlist = CSVWatchlist.newInstance(tableModel);
@@ -1578,7 +1600,7 @@ public class MainFrame extends javax.swing.JFrame {
     private boolean saveAsExcelFile(File file) {
         final TableModel tableModel = jTable1.getModel();
         final org.yccheok.jstock.file.Statements statements = org.yccheok.jstock.file.Statements.newInstanceFromTableModel(tableModel, false);
-        assert(statements != null);
+        assert (statements != null);
         return statements.saveAsExcelFile(file, GUIBundle.getString("MainFrame_Title"));
     }
 
@@ -1593,7 +1615,7 @@ public class MainFrame extends javax.swing.JFrame {
             // run JStock.
             jStockOptions = new JStockOptions();
         }
-            
+
         for (String arg : args) {
             final String[] tokens = arg.split("=");
             if (tokens.length != 2) {
@@ -1614,7 +1636,7 @@ public class MainFrame extends javax.swing.JFrame {
                             jStockOptions.setLocale(locale);
                         }
                     }
-                } catch(IllegalArgumentException ex) {
+                } catch (IllegalArgumentException ex) {
                     log.error(null, ex);
                 }
             }
@@ -1629,40 +1651,40 @@ public class MainFrame extends javax.swing.JFrame {
     public static void main(String args[]) {
         // Make migrateFrom106zTo107 before AppLock, as AppLock depends on
         // correct data directory.
-        
+
         /* This ugly code shall be removed in next few release. */
         if (false == Utils.migrateFrom106zTo107()) {
             final int choice = JOptionPane.showConfirmDialog(null,
-                "JStock unable to read previous 1.0.6z portfolio and settings, continue?\n\nPress \"Yes\" to continue, BUT all your data will lost.\n\nOr, Press \"No\", restart your machine and try again.",
-                "JStock unable to read previous 1.0.6z portfolio and settings",
-                JOptionPane.YES_NO_OPTION);
+                    "JStock unable to read previous 1.0.6z portfolio and settings, continue?\n\nPress \"Yes\" to continue, BUT all your data will lost.\n\nOr, Press \"No\", restart your machine and try again.",
+                    "JStock unable to read previous 1.0.6z portfolio and settings",
+                    JOptionPane.YES_NO_OPTION);
             log.error("Migration from 1.0.6z to 1.0.7 fail.");
 
             if (choice != JOptionPane.YES_OPTION) {
                 System.exit(0);
             }
         }
-        
+
         if (false == AppLock.lock()) {
-            final int choice = JOptionPane.showOptionDialog(null, 
+            final int choice = JOptionPane.showOptionDialog(null,
                     MessagesBundle.getString("warning_message_running_2_jstock"),
                     MessagesBundle.getString("warning_title_running_2_jstock"),
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE,
                     null,
-                    new String[] {MessagesBundle.getString("yes_button_running_2_jstock"), MessagesBundle.getString("no_button_running_2_jstock")}, 
+                    new String[]{MessagesBundle.getString("yes_button_running_2_jstock"), MessagesBundle.getString("no_button_running_2_jstock")},
                     MessagesBundle.getString("no_button_running_2_jstock"));
             if (choice != JOptionPane.YES_OPTION) {
                 System.exit(0);
                 return;
             }
-        }        
+        }
 
         // As ProxyDetector is affected by system properties
         // http.proxyHost, we are forced to initialized ProxyDetector right here,
         // before we manually change the system properties according to
         // JStockOptions.
-        ProxyDetector.getInstance();      
+        ProxyDetector.getInstance();
 
         Utils.setDefaultLookAndFeel();
 
@@ -1676,12 +1698,12 @@ public class MainFrame extends javax.swing.JFrame {
                 // This global effect, should just come before anything else, 
                 // after we get an instance of JStockOptions.
                 Locale.setDefault(jStockOptions.getLocale());
-                
+
                 // We need to first assign jStockOptions to mainFrame, as during
                 // Utils.migrateXMLToCSVPortfolios, we will be accessing mainFrame's
                 // jStockOptions.
                 mainFrame.initJStockOptions(jStockOptions);
-                
+
                 // TODO : Remove this code after some time.
                 if (Utils.isWatchlistAndPortfolioFilesInXML(jStockOptions.getApplicationVersionID())) {
                     boolean status = true;
@@ -1690,15 +1712,15 @@ public class MainFrame extends javax.swing.JFrame {
                     } else {
                         System.out.println("XML to CSV portfolios migration failed!");
                         status = false;
-                    } 
-                    
+                    }
+
                     if (org.yccheok.jstock.watchlist.Utils.migrateXMLToCSVWatchlists(Utils.getUserDataDirectory(), Utils.getUserDataDirectory())) {
                         System.out.println("XML to CSV watchlists migration done :)");
                     } else {
                         System.out.println("XML to CSV watchlists migration failed!");
                         status = false;
-                    }                    
-                    
+                    }
+
                     if (false == status) {
                         File destFile = new File(System.getProperty("user.home") + File.separator + "jstock.zip");
                         File file = SaveToCloudJDialog.getJStockZipFileForConversionErrorMessageJDialog(destFile);
@@ -1709,12 +1731,12 @@ public class MainFrame extends javax.swing.JFrame {
                         AppLock.unlock();
                         System.exit(-1);
                     }
-                }                                  
-                    
+                }
+
                 if (Utils.isDatabaseFilesInXML(jStockOptions.getApplicationVersionID())) {
                     org.yccheok.jstock.engine.Utils.migrateXMLToCSVDatabases(Utils.getUserDataDirectory(), Utils.getUserDataDirectory());
                 }
-                
+
                 mainFrame.init();
                 mainFrame.setVisible(true);
                 mainFrame.updateDividerLocation();
@@ -1727,7 +1749,7 @@ public class MainFrame extends javax.swing.JFrame {
     private void updateDividerLocation() {
         this.portfolioManagementJPanel.updateDividerLocation();
     }
-    
+
     private void clearAllStocks() {
         if (stockCodeHistoryGUI != null) {
             stockCodeHistoryGUI.clear();
@@ -1738,7 +1760,7 @@ public class MainFrame extends javax.swing.JFrame {
         if (stockHistoryMonitor != null) {
             stockHistoryMonitor.clearStockCodes();
         }
-        final StockTableModel tableModel = (StockTableModel)jTable1.getModel();                                 
+        final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
         this.initAlertStateManager();
 
         if (java.awt.EventQueue.isDispatchThread()) {
@@ -1750,7 +1772,7 @@ public class MainFrame extends javax.swing.JFrame {
                 public void run() {
                     tableModel.clearAllStocks();
                     updateDynamicChart(null);
-                }                
+                }
             });
         }
 
@@ -1759,22 +1781,22 @@ public class MainFrame extends javax.swing.JFrame {
                 if (this.stockInfoDatabase != null) {
                     this.setStatusBar(false, this.getBestStatusBarMessage());
                 }
-            }        
-        }        
+            }
+        }
     }
-    
+
     // Should we synchronized the jTable1, or post the job at GUI event dispatch
     // queue?    
     private void deteleSelectedTableRow() {
-        assert(java.awt.EventQueue.isDispatchThread());
-        
-        StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+        assert (java.awt.EventQueue.isDispatchThread());
+
+        StockTableModel tableModel = (StockTableModel) jTable1.getModel();
 
         int rows[] = jTable1.getSelectedRows();
 
         Arrays.sort(rows);
 
-        for (int i = rows.length-1; i >= 0; i--) {
+        for (int i = rows.length - 1; i >= 0; i--) {
             int row = rows[i];
 
             if (row < 0) {
@@ -1787,8 +1809,8 @@ public class MainFrame extends javax.swing.JFrame {
             stockHistoryMonitor.removeStockCode(stock.code);
             tableModel.removeRow(modelIndex);
             this.alertStateManager.clearState(stock);
-        }            
-        
+        }
+
         this.updateDynamicChart(null);
 
         if (stockCodeHistoryGUI.isEmpty()) {
@@ -1859,14 +1881,11 @@ public class MainFrame extends javax.swing.JFrame {
      * @param mainMessage message on the left
      */
     public void setStatusBar(final boolean progressBar, final String mainMessage) {
-        if (SwingUtilities.isEventDispatchThread())
-        {
+        if (SwingUtilities.isEventDispatchThread()) {
             isStatusBarBusy = progressBar;
             statusBar.setProgressBar(progressBar);
             statusBar.setMainMessage(mainMessage);
-        }
-        else
-        {
+        } else {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
@@ -1877,27 +1896,28 @@ public class MainFrame extends javax.swing.JFrame {
             });
         }
     }
-    
+
     class ChangeLookAndFeelAction extends AbstractAction {
+
         MainFrame mainFrame;
         String lafClassName;
-  
+
         protected ChangeLookAndFeelAction(MainFrame mainFrame, String lafClassName) {
             super("ChangeTheme");
             this.mainFrame = mainFrame;
             this.lafClassName = lafClassName;
         }
-  
+
         public String getLafClassName() {
             return lafClassName;
         }
-        
+
         @Override
         public void actionPerformed(ActionEvent e) {
             mainFrame.setLookAndFeel(lafClassName);
         }
     }
-  
+
     public void setLookAndFeel(String lafClassName) {
         /* Backward compataible purpose. Old JStockOptions may contain null in this field. */
         if (lafClassName == null) {
@@ -1906,36 +1926,32 @@ public class MainFrame extends javax.swing.JFrame {
         try {
             UIManager.setLookAndFeel(lafClassName);
             SwingUtilities.updateComponentTreeUI(this);
-        }
-        catch (java.lang.ClassNotFoundException exp) {
+        } catch (java.lang.ClassNotFoundException exp) {
+            log.error(null, exp);
+        } catch (java.lang.InstantiationException exp) {
+            log.error(null, exp);
+        } catch (java.lang.IllegalAccessException exp) {
+            log.error(null, exp);
+        } catch (javax.swing.UnsupportedLookAndFeelException exp) {
             log.error(null, exp);
         }
-        catch (java.lang.InstantiationException exp) {
-            log.error(null, exp);
-        }
-        catch (java.lang.IllegalAccessException exp) {
-            log.error(null, exp);
-        }
-        catch (javax.swing.UnsupportedLookAndFeelException exp) {
-            log.error(null, exp);
-        }
-        
+
         this.jStockOptions.setLookNFeel(lafClassName);
-        
-        for (Enumeration<AbstractButton> e = this.buttonGroup1.getElements() ; e.hasMoreElements() ;) {
+
+        for (Enumeration<AbstractButton> e = this.buttonGroup1.getElements(); e.hasMoreElements();) {
             AbstractButton button = e.nextElement();
-            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem)button;
-            ChangeLookAndFeelAction a = (ChangeLookAndFeelAction)m.getActionListeners()[0];
-                        
+            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem) button;
+            ChangeLookAndFeelAction a = (ChangeLookAndFeelAction) m.getActionListeners()[0];
+
             if (a.getLafClassName().equals(lafClassName)) {
                 m.setSelected(true);
-                break;                   
+                break;
             }
         }
-        
+
         // Sequence are important. The AutoCompleteJComboBox itself should have the highest
         // priority.
-        ((AutoCompleteJComboBox)jComboBox1).setStockInfoDatabase(this.stockInfoDatabase);
+        ((AutoCompleteJComboBox) jComboBox1).setStockInfoDatabase(this.stockInfoDatabase);
         this.indicatorPanel.setStockInfoDatabase(this.stockInfoDatabase);
     }
 
@@ -1944,21 +1960,21 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     private void createPortfolioManagementJPanel() {
-        portfolioManagementJPanel = new PortfolioManagementJPanel();        
+        portfolioManagementJPanel = new PortfolioManagementJPanel();
         jTabbedPane1.addTab(GUIBundle.getString("PortfolioManagementJPanel_Title"), portfolioManagementJPanel);
     }
-    
+
     private void createStockIndicatorEditor() {
-        indicatorPanel = new IndicatorPanel();                
+        indicatorPanel = new IndicatorPanel();
         jTabbedPane1.addTab(GUIBundle.getString("IndicatorPanel_Title"), indicatorPanel);
     }
 
     private void createIndicatorScannerJPanel() {
-        this.indicatorScannerJPanel = new IndicatorScannerJPanel();                
+        this.indicatorScannerJPanel = new IndicatorScannerJPanel();
         jTabbedPane1.addTab(GUIBundle.getString("IndicatorScannerJPanel_Title"), indicatorScannerJPanel);
         jTabbedPane1.addChangeListener(indicatorScannerJPanel);
     }
-    
+
     // Due to the unknown problem in netbeans IDE, we will add in the tooltip
     // and icon seperately.
     private void createIconsAndToolTipTextForJTabbedPane() {
@@ -1971,7 +1987,7 @@ public class MainFrame extends javax.swing.JFrame {
         this.jTabbedPane1.setToolTipTextAt(2, java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_ScanThroughTheEntireStockMarketSoThatYouWillBeInformedWhatToSellOrBuy"));
         this.jTabbedPane1.setToolTipTextAt(3, java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_ManageYourRealTimePortfolioWhichEnableYouToTrackBuyAndSellRecords"));
     }
-      
+
     public void createCountryMenuItem() {
         final Country[] countries = Country.values();
 
@@ -1988,64 +2004,62 @@ public class MainFrame extends javax.swing.JFrame {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     MainFrame.this.changeCountry(country);
-                }                
+                }
             });
-            
+
             if (jStockOptions.getCountry() == country) {
                 ((JRadioButtonMenuItem) mi).setSelected(true);
             }
         }
     }
-            
+
     public void createLookAndFeelMenuItem() {
         LookAndFeel currentlaf = UIManager.getLookAndFeel();
-        
+
         UIManager.LookAndFeelInfo[] lafInfo = UIManager.getInstalledLookAndFeels();
 
-        for(int i=0; i<lafInfo.length; i++) {
+        for (int i = 0; i < lafInfo.length; i++) {
             JMenuItem mi = (JRadioButtonMenuItem) jMenu4.add(new JRadioButtonMenuItem(lafInfo[i].getName()));
             buttonGroup1.add(mi);
             mi.addActionListener(new ChangeLookAndFeelAction(this, lafInfo[i].getClassName()));
-            
+
             if (currentlaf != null) {
-                if (lafInfo[i].getClassName().equals(currentlaf.getClass().getName()))
-                {
+                if (lafInfo[i].getClassName().equals(currentlaf.getClass().getName())) {
                     ((JRadioButtonMenuItem) mi).setSelected(true);
                 }
             }
         }
     }
-  
+
     private javax.swing.event.TableModelListener getTableModelListener() {
         return new javax.swing.event.TableModelListener() {
             @Override
-           public void tableChanged(javax.swing.event.TableModelEvent e) {
+            public void tableChanged(javax.swing.event.TableModelEvent e) {
                 int firstRow = e.getFirstRow();
                 int lastRow = e.getLastRow();
                 int mColIndex = e.getColumn();
-                
+
                 switch (e.getType()) {
                     case javax.swing.event.TableModelEvent.INSERT:
                         break;
-                        
-                  case javax.swing.event.TableModelEvent.UPDATE:
-                    break;
 
-                  case javax.swing.event.TableModelEvent.DELETE:
-                    break;                        
+                    case javax.swing.event.TableModelEvent.UPDATE:
+                        break;
+
+                    case javax.swing.event.TableModelEvent.DELETE:
+                        break;
                 }
-            }            
+            }
         };
     }
 
-    private Image getMyIconImage()
-    {
+    private Image getMyIconImage() {
         if (Utils.isWindows7() || Utils.isWindows8()) {
             return new javax.swing.ImageIcon(getClass().getResource("/images/128x128/chart.png")).getImage();
         }
         return new javax.swing.ImageIcon(getClass().getResource("/images/16x16/chart.png")).getImage();
     }
-    
+
     private void createSystemTrayIcon() {
         if (SystemTray.isSupported()) {
             SystemTray tray = SystemTray.getSystemTray();
@@ -2057,29 +2071,28 @@ public class MainFrame extends javax.swing.JFrame {
             }
 
             MouseListener mouseListener = new MouseListener() {
-
                 @Override
                 public void mouseClicked(MouseEvent e) {
-                    if(e.getButton() == MouseEvent.BUTTON1) {
+                    if (e.getButton() == MouseEvent.BUTTON1) {
                         MainFrame.this.setVisible(true);
                         MainFrame.this.setState(Frame.NORMAL);
                     }
                 }
 
                 @Override
-                public void mouseEntered(MouseEvent e) {               
+                public void mouseEntered(MouseEvent e) {
                 }
 
                 @Override
-                public void mouseExited(MouseEvent e) {            
+                public void mouseExited(MouseEvent e) {
                 }
 
                 @Override
-                public void mousePressed(MouseEvent e) {             
+                public void mousePressed(MouseEvent e) {
                 }
 
                 @Override
-                public void mouseReleased(MouseEvent e) {              
+                public void mouseReleased(MouseEvent e) {
                 }
             };
 
@@ -2119,20 +2132,20 @@ public class MainFrame extends javax.swing.JFrame {
             //  System Tray is not supported
             trayIcon = null;
             JOptionPane.showMessageDialog(MainFrame.this, java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/messages").getString("warning_message_system_tray_is_not_supported"), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/messages").getString("warning_title_system_tray_is_not_supported"), JOptionPane.WARNING_MESSAGE);
-        }        
+        }
     }
-    
+
     private void initTableHeaderToolTips() {
         JTableHeader header = jTable1.getTableHeader();
-    
+
         ColumnHeaderToolTips tips = new ColumnHeaderToolTips();
 
         tips.setToolTip(jTable1.getColumn(GUIBundle.getString("MainFrame_FallBelow")), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_AlertUserWhenLastPriceFallBelowOrEqualToSpecifiedValue"));
         tips.setToolTip(jTable1.getColumn(GUIBundle.getString("MainFrame_RiseAbove")), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_AlertUserWhenLastPriceFallAboveOrEqualToSpecifiedValue"));
 
-        header.addMouseMotionListener(tips);        
+        header.addMouseMotionListener(tips);
     }
-    
+
     /* Save everything to disc, before perform uploading. */
     public void commitBeforeUploadToCloud() {
         // Previously, we will store the entire stockcodeandsymboldatabase.xml
@@ -2161,12 +2174,12 @@ public class MainFrame extends javax.swing.JFrame {
         /* These codes are very similar to clean up code during application
          * exit.
          */
-                
+
         // So that later we know that this XML file is saved by which version of
         // JStock.
-        jStockOptions.setApplicationVersionID(Utils.getApplicationVersionID());        
+        jStockOptions.setApplicationVersionID(Utils.getApplicationVersionID());
         this.saveJStockOptions();
-        
+
         this.saveGUIOptions();
         this.saveChartJDialogOptions();
         this.saveBrokingFirmLogos();
@@ -2174,15 +2187,14 @@ public class MainFrame extends javax.swing.JFrame {
         this.indicatorPanel.saveAlertIndicatorProjectManager();
         this.indicatorPanel.saveModuleIndicatorProjectManager();
         this.portfolioManagementJPanel.savePortfolio();
-        
+
         saveWatchlistAndPortfolioInfos();
     }
 
     // Only call this function after you had saved all the watchlists and
     // portfolios.
     private boolean saveWatchlistAndPortfolioInfos() {
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "android") == false)
-        {
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "android") == false) {
             return false;
         }
 
@@ -2194,7 +2206,7 @@ public class MainFrame extends javax.swing.JFrame {
         boolean result1 = Statements.newInstanceFromPortfolioInfos(portfolioInfos).saveAsCSVFile(portfolioInfosFile);
         return result0 && result1;
     }
-    
+
     /* Reload after downloading from cloud. Take note that we must reload
      * JStockOptions before and outside this method, due to insensitive data
      * requirement.
@@ -2233,17 +2245,17 @@ public class MainFrame extends javax.swing.JFrame {
         this.initDynamicCharts();
         this.initDynamicChartVisibility();
 
-        for (Enumeration<AbstractButton> e = this.buttonGroup2.getElements() ; e.hasMoreElements() ;) {
+        for (Enumeration<AbstractButton> e = this.buttonGroup2.getElements(); e.hasMoreElements();) {
             AbstractButton button = e.nextElement();
-            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem)button;
-            
+            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem) button;
+
             // Ugly fix on spelling mistake.
             if (jStockOptions.getCountry() == Country.UnitedState && m.getText().equals(jStockOptions.getCountry().toString() + "s")) {
                 m.setSelected(true);
-                break;                
+                break;
             }
-            
-            if(m.getText().equals(jStockOptions.getCountry().toString())) {
+
+            if (m.getText().equals(jStockOptions.getCountry().toString())) {
                 m.setSelected(true);
                 break;
             }
@@ -2280,19 +2292,18 @@ public class MainFrame extends javax.swing.JFrame {
         saveGUIOptions();
 
         /* Need to save chart dialog options? */
-        
+
         saveWatchlist();
         this.portfolioManagementJPanel.savePortfolio();
 
         // Spain no longer supported. Sad...
         if (country == Country.Spain) {
             JOptionPane.showMessageDialog(
-                null, 
-                MessagesBundle.getString("info_message_spain_not_supported"), 
-                MessagesBundle.getString("info_title_spain_not_supported"), 
-                JOptionPane.INFORMATION_MESSAGE
-            );
-        }        
+                    null,
+                    MessagesBundle.getString("info_message_spain_not_supported"),
+                    MessagesBundle.getString("info_title_spain_not_supported"),
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
         jStockOptions.setCountry(country);
         MainFrame.this.statusBar.setCountryIcon(country.getIcon(), country.toString());
 
@@ -2322,21 +2333,21 @@ public class MainFrame extends javax.swing.JFrame {
         this.initDynamicCharts();
         // this.initDynamicChartVisibility();
 
-        for (Enumeration<AbstractButton> e = this.buttonGroup2.getElements() ; e.hasMoreElements() ;) {
+        for (Enumeration<AbstractButton> e = this.buttonGroup2.getElements(); e.hasMoreElements();) {
             AbstractButton button = e.nextElement();
-            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem)button;
-             
+            javax.swing.JRadioButtonMenuItem m = (javax.swing.JRadioButtonMenuItem) button;
+
             // Ugly fix on spelling mistake.    
             if (country == Country.UnitedState && m.getText().equals(country.toString() + "s")) {
                 m.setSelected(true);
-                break;                
+                break;
             }
-            
+
             if (m.getText().equals(country.toString())) {
                 m.setSelected(true);
-                break;                   
+                break;
             }
-        }        
+        }
     }
 
     private MouseAdapter getMyJXStatusBarExchangeRateLabelMouseAdapter() {
@@ -2359,25 +2370,25 @@ public class MainFrame extends javax.swing.JFrame {
         return new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if(e.getClickCount() == 2) {
+                if (e.getClickCount() == 2) {
                     CountryJDialog countryJDialog = new CountryJDialog(MainFrame.this, true);
                     countryJDialog.setLocationRelativeTo(MainFrame.this);
                     countryJDialog.setCountry(jStockOptions.getCountry());
                     countryJDialog.setVisible(true);
-                    
+
                     final Country country = countryJDialog.getCountry();
                     changeCountry(country);
                 }
             }
         };
     }
-    
+
     private MouseAdapter getMyJXStatusBarImageLabelMouseAdapter() {
         return new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    
+
                     // Make sure no other task is running.
                     // Use local variable to be thread safe.
                     final DatabaseTask task = MainFrame.this.databaseTask;
@@ -2403,39 +2414,35 @@ public class MainFrame extends javax.swing.JFrame {
                                 // Fail. Automatically reload database for user. Need not to prompt them message.
                                 // As, they do not have any database right now.
                                 MainFrame.this.initDatabase(true);
-                                
+
                             } else {
                                 final int result = JOptionPane.showConfirmDialog(MainFrame.this, MessagesBundle.getString("question_message_perform_server_reconnecting"), MessagesBundle.getString("question_title_perform_server_reconnecting"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
                                 if (result == JOptionPane.YES_OPTION) {
                                     MainFrame.this.initDatabase(false);
                                 }
                             }
-                        }
-                        else {
+                        } else {
                             // There is task still running. Ask user whether he wants
                             // to stop it.
                             final int result = JOptionPane.showConfirmDialog(MainFrame.this, MessagesBundle.getString("question_message_cancel_server_reconnecting"), MessagesBundle.getString("question_title_cancel_server_reconnecting"), JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
-                            
-                            if (result == JOptionPane.YES_OPTION)
-                            {                            
-                                synchronized (MainFrame.this.databaseTaskMonitor)
-                                {
+
+                            if (result == JOptionPane.YES_OPTION) {
+                                synchronized (MainFrame.this.databaseTaskMonitor) {
                                     MainFrame.this.databaseTask.cancel(true);
                                     MainFrame.this.databaseTask = null;
                                 }
-                                
+
                                 setStatusBar(false, GUIBundle.getString("MainFrame_NetworkError"));
                                 statusBar.setImageIcon(getImageIcon("/images/16x16/network-error.png"), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_DoubleClickedToTryAgain"));
                             }
                         }
-                    }
-                    else {
+                    } else {
                         // User cancels databaseTask explicitly. (Cancel while
                         // JStock is fetching database from server). Let's read
                         // from disk.
                         initDatabase(true);
                     }
-                            
+
                 }
             }
         };
@@ -2448,29 +2455,29 @@ public class MainFrame extends javax.swing.JFrame {
     public StockNameDatabase getStockNameDatabase() {
         return stockNameDatabase;
     }
-    
+
     public java.util.List<StockServerFactory> getStockServerFactories() {
         return Factories.INSTANCE.getStockServerFactories(this.jStockOptions.getCountry());
     }
-    
+
     public java.util.List<Stock> getStocks() {
-        final StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+        final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
         return tableModel.getStocks();
     }
-    
+
     // Should we synchronized the jTable1, or post the job to GUI event dispatch
     // queue?
     public void addStockToTable(final Stock stock, final StockAlert alert) {
         final JTable _jTable1 = this.jTable1;
         if (java.awt.EventQueue.isDispatchThread()) {
-            final StockTableModel tableModel = (StockTableModel)_jTable1.getModel();
+            final StockTableModel tableModel = (StockTableModel) _jTable1.getModel();
             tableModel.addStock(stock, alert);
         } else {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    final StockTableModel tableModel = (StockTableModel)_jTable1.getModel();
-                    tableModel.addStock(stock, alert);                    
+                    final StockTableModel tableModel = (StockTableModel) _jTable1.getModel();
+                    tableModel.addStock(stock, alert);
                 }
             });
         }
@@ -2479,43 +2486,43 @@ public class MainFrame extends javax.swing.JFrame {
     public void addStockToTable(final Stock stock) {
         final JTable _jTable1 = this.jTable1;
         if (java.awt.EventQueue.isDispatchThread()) {
-            final StockTableModel tableModel = (StockTableModel)_jTable1.getModel();
+            final StockTableModel tableModel = (StockTableModel) _jTable1.getModel();
             tableModel.addStock(stock);
         } else {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    final StockTableModel tableModel = (StockTableModel)_jTable1.getModel();
-                    tableModel.addStock(stock);                    
+                    final StockTableModel tableModel = (StockTableModel) _jTable1.getModel();
+                    tableModel.addStock(stock);
                 }
-            });            
+            });
         }
     }
 
     // Only will return true if the selected stock is the one and only one.
     private boolean isStockBeingSelected(final Stock stock) {
         int[] rows = MainFrame.this.jTable1.getSelectedRows();
-            
+
         if (rows.length == 1) {
             final int row = rows[0];
-            final StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+            final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
             final int modelIndex = jTable1.convertRowIndexToModel(row);
             if (stock.code.equals(tableModel.getStock(modelIndex).code)) {
                 return true;
             }
         }
-        
+
         return false;
     }
-    
+
     // Return one and only one selected stock. Otherwise null.
     private Stock getSelectedStock() {
         int[] rows = MainFrame.this.jTable1.getSelectedRows();
 
-        if(rows.length == 1) {
+        if (rows.length == 1) {
             int row = rows[0];
 
-            StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+            StockTableModel tableModel = (StockTableModel) jTable1.getModel();
             int modelIndex = jTable1.convertRowIndexToModel(row);
             return tableModel.getStock(modelIndex);
         }
@@ -2524,22 +2531,21 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     private void updateStockToTable(final Stock stock) {
-        StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+        StockTableModel tableModel = (StockTableModel) jTable1.getModel();
         tableModel.updateStock(stock);
     }
 
-    private void update(final Indicator indicator, Boolean result)
-    {
+    private void update(final Indicator indicator, Boolean result) {
         final boolean flag = result;
 
         if (flag == false) {
             return;
         }
 
-        final StockTableModel stockTableModel = (StockTableModel)MainFrame.this.jTable1.getModel();
-        final Stock stock = indicator.getStock();        
-        final Double price = ((OperatorIndicator)indicator).getName().equalsIgnoreCase("fallbelow") ? stockTableModel.getFallBelow(stock) : stockTableModel.getRiseAbove(stock);
-	final double lastPrice = stock.getLastPrice();
+        final StockTableModel stockTableModel = (StockTableModel) MainFrame.this.jTable1.getModel();
+        final Stock stock = indicator.getStock();
+        final Double price = ((OperatorIndicator) indicator).getName().equalsIgnoreCase("fallbelow") ? stockTableModel.getFallBelow(stock) : stockTableModel.getRiseAbove(stock);
+        final double lastPrice = stock.getLastPrice();
 
         // Using lastPrice = 0 to compare against fall below and rise above
         // target price is meaningless. In normal condition, no stock price
@@ -2549,19 +2555,16 @@ public class MainFrame extends javax.swing.JFrame {
             return;
         }
 
-        if(this.jStockOptions.isPopupMessage()) {
+        if (this.jStockOptions.isPopupMessage()) {
             final Runnable r = new Runnable() {
                 @Override
-                public void run() {                    
+                public void run() {
                     String message = "";
 
-                    if (((OperatorIndicator)indicator).getName().equalsIgnoreCase("fallbelow"))
-                    {
+                    if (((OperatorIndicator) indicator).getName().equalsIgnoreCase("fallbelow")) {
                         final String template = GUIBundle.getString("MainFrame_FallBelow_template");
                         message = MessageFormat.format(template, stock.symbol, lastPrice, price);
-                    }
-                    else
-                    {
+                    } else {
                         final String template = GUIBundle.getString("MainFrame_RiseAbove_template");
                         message = MessageFormat.format(template, stock.symbol, lastPrice, price);
                     }
@@ -2576,8 +2579,7 @@ public class MainFrame extends javax.swing.JFrame {
 
                         try {
                             Thread.sleep(jStockOptions.getAlertSpeed() * 1000);
-                        }
-                        catch (InterruptedException exp) {
+                        } catch (InterruptedException exp) {
                             log.error(null, exp);
                         }
                     }
@@ -2586,8 +2588,7 @@ public class MainFrame extends javax.swing.JFrame {
 
             try {
                 systemTrayAlertPool.submit(r);
-            }
-            catch (java.util.concurrent.RejectedExecutionException exp) {
+            } catch (java.util.concurrent.RejectedExecutionException exp) {
                 log.error(null, exp);
             }
         }   /* if(this.jStockOptions.isPopupMessage()) */
@@ -2603,8 +2604,7 @@ public class MainFrame extends javax.swing.JFrame {
 
                         try {
                             Thread.sleep(jStockOptions.getAlertSpeed() * 1000);
-                        }
-                        catch (InterruptedException exp) {
+                        } catch (InterruptedException exp) {
                             log.error(null, exp);
                         }
                     }
@@ -2613,8 +2613,7 @@ public class MainFrame extends javax.swing.JFrame {
 
             try {
                 systemTrayAlertPool.submit(r);
-            }
-            catch (java.util.concurrent.RejectedExecutionException exp) {
+            } catch (java.util.concurrent.RejectedExecutionException exp) {
                 log.error(null, exp);
             }
         }   /* if(this.jStockOptions.isSoundEnabled()) */
@@ -2625,13 +2624,10 @@ public class MainFrame extends javax.swing.JFrame {
                 public void run() {
                     String title = "";
 
-                    if (((OperatorIndicator)indicator).getName().equalsIgnoreCase("fallbelow"))
-                    {
+                    if (((OperatorIndicator) indicator).getName().equalsIgnoreCase("fallbelow")) {
                         final String template = GUIBundle.getString("MainFrame_FallBelow_template");
                         title = MessageFormat.format(template, stock.symbol, lastPrice, price);
-                    }
-                    else
-                    {
+                    } else {
                         final String template = GUIBundle.getString("MainFrame_RiseAbove_template");
                         title = MessageFormat.format(template, stock.symbol, lastPrice, price);
                     }
@@ -2652,8 +2648,7 @@ public class MainFrame extends javax.swing.JFrame {
 
             try {
                 emailAlertPool.submit(r);
-            }
-            catch (java.util.concurrent.RejectedExecutionException exp) {
+            } catch (java.util.concurrent.RejectedExecutionException exp) {
                 log.error(null, exp);
             }
         }   /* if(jStockOptions.isSendEmail()) */
@@ -2663,13 +2658,10 @@ public class MainFrame extends javax.swing.JFrame {
                 @Override
                 public void run() {
                     String message = "";
-                    if (((OperatorIndicator)indicator).getName().equalsIgnoreCase("fallbelow"))
-                    {
+                    if (((OperatorIndicator) indicator).getName().equalsIgnoreCase("fallbelow")) {
                         final String template = GUIBundle.getString("MainFrame_FallBelow_template");
                         message = MessageFormat.format(template, stock.symbol, lastPrice, price);
-                    }
-                    else
-                    {
+                    } else {
                         final String template = GUIBundle.getString("MainFrame_RiseAbove_template");
                         message = MessageFormat.format(template, stock.symbol, lastPrice, price);
                     }
@@ -2686,17 +2678,16 @@ public class MainFrame extends javax.swing.JFrame {
 
             try {
                 smsAlertPool.submit(r);
-            }
-            catch(java.util.concurrent.RejectedExecutionException exp) {
+            } catch (java.util.concurrent.RejectedExecutionException exp) {
                 log.error(null, exp);
             }
         }   /* if(jStockOptions.isSMSEnabled()) */
     }
 
     /**
-     * Highlight stock at row <code>modelRow</code>, by making it selected and
-     * visible.
-     * 
+     * Highlight stock at row
+     * <code>modelRow</code>, by making it selected and visible.
+     *
      * @param modelRow row respected to stock model
      */
     private void highlightStock(int modelRow) {
@@ -2730,10 +2721,9 @@ public class MainFrame extends javax.swing.JFrame {
 
     private org.yccheok.jstock.engine.Observer<AutoCompleteJComboBox, AjaxYahooSearchEngine.ResultType> getResultObserver() {
         return new org.yccheok.jstock.engine.Observer<AutoCompleteJComboBox, AjaxYahooSearchEngine.ResultType>() {
-
             @Override
             public void update(AutoCompleteJComboBox subject, ResultType resultType) {
-                assert(resultType != null);
+                assert (resultType != null);
                 // Symbol from Yahoo means Code in JStock.
                 final Code code = Code.newInstance(resultType.symbol);
                 // Name from Yahoo means Symbol in JStock.
@@ -2752,7 +2742,7 @@ public class MainFrame extends javax.swing.JFrame {
         return new org.yccheok.jstock.engine.Observer<AutoCompleteJComboBox, StockInfo>() {
             @Override
             public void update(AutoCompleteJComboBox subject, StockInfo stockInfo) {
-                assert(stockInfo != null);
+                assert (stockInfo != null);
                 addStockInfoFromAutoCompleteJComboBox(stockInfo);
             }   // public void update(AutoCompleteJComboBox subject, StockInfo stockInfo)
         };
@@ -2763,10 +2753,10 @@ public class MainFrame extends javax.swing.JFrame {
         // When user try to enter a stock, and the stock is already in
         // the table, the stock shall be highlighted. Stock will be
         // selected and the table shall be scrolled to be visible.
-        final StockTableModel tableModel = (StockTableModel)MainFrame.this.jTable1.getModel();
+        final StockTableModel tableModel = (StockTableModel) MainFrame.this.jTable1.getModel();
 
         final Stock emptyStock = Utils.getEmptyStock(stockInfo);
-        
+
         // First add the empty stock, so that the user will not have wrong perspective that
         // our system is slow.
         addStockToTable(emptyStock);
@@ -2774,7 +2764,7 @@ public class MainFrame extends javax.swing.JFrame {
         realTimeStockMonitor.addStockCode(stockInfo.code);
         realTimeStockMonitor.startNewThreadsIfNecessary();
         realTimeStockMonitor.refresh();
-        
+
         MainFrame.this.highlightStock(row);
     }
 
@@ -2792,8 +2782,7 @@ public class MainFrame extends javax.swing.JFrame {
     private org.yccheok.jstock.engine.Observer<RealTimeStockMonitor, java.util.List<Stock>> getRealTimeStockMonitorObserver() {
         return new org.yccheok.jstock.engine.Observer<RealTimeStockMonitor, java.util.List<Stock>>() {
             @Override
-            public void update(RealTimeStockMonitor monitor, java.util.List<Stock> stocks)
-            {
+            public void update(RealTimeStockMonitor monitor, java.util.List<Stock> stocks) {
                 MainFrame.this.update(monitor, stocks);
             }
         };
@@ -2802,49 +2791,47 @@ public class MainFrame extends javax.swing.JFrame {
     private org.yccheok.jstock.engine.Observer<StockHistoryMonitor, StockHistoryMonitor.StockHistoryRunnable> getStockHistoryMonitorObserver() {
         return new org.yccheok.jstock.engine.Observer<StockHistoryMonitor, StockHistoryMonitor.StockHistoryRunnable>() {
             @Override
-            public void update(StockHistoryMonitor monitor, StockHistoryMonitor.StockHistoryRunnable runnable)
-            {
+            public void update(StockHistoryMonitor monitor, StockHistoryMonitor.StockHistoryRunnable runnable) {
                 MainFrame.this.update(monitor, runnable);
             }
         };
     }
-    
+
     public StockHistoryServer getStockHistoryServer(Code stockCode) {
         return stockHistoryMonitor.getStockHistoryServer(stockCode);
     }
-    
+
     public StockHistoryMonitor getStockHistoryMonitor() {
         return stockHistoryMonitor;
     }
-    
+
     // Asynchronous call. Must be called by event dispatch thread.
     public void displayHistoryChart(Stock stock) {
         final StockHistoryServer stockHistoryServer = stockHistoryMonitor.getStockHistoryServer(stock.code);
 
         if (stockHistoryServer == null) {
-            if (stockCodeHistoryGUI.add(stock.code) && stockHistoryMonitor.addStockCode(stock.code)) {                                
+            if (stockCodeHistoryGUI.add(stock.code) && stockHistoryMonitor.addStockCode(stock.code)) {
                 final String template = GUIBundle.getString("MainFrame_LookingForHistory_template");
                 final String message = MessageFormat.format(template, stock.symbol, stockCodeHistoryGUI.size());
                 setStatusBar(true, message);
             }
-        }
-        else {
+        } else {
             ChartJDialog chartJDialog = new ChartJDialog(MainFrame.this, stock.symbol + " (" + stock.code + ")", false, stockHistoryServer);
-            chartJDialog.setVisible(true);                            
-        }        
+            chartJDialog.setVisible(true);
+        }
     }
-    
+
     private JPopupMenu getMyJTablePopupMenu() {
         final JPopupMenu popup = new JPopupMenu();
-        final TableModel tableModel = jTable1.getModel();            
-        
+        final TableModel tableModel = jTable1.getModel();
+
         javax.swing.JMenuItem menuItem = new JMenuItem(java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_History..."), this.getImageIcon("/images/16x16/strokedocker.png"));
-        
+
         menuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent evt) {
                 int rows[] = jTable1.getSelectedRows();
-                final StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+                final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
 
                 for (int row : rows) {
                     final int modelIndex = jTable1.getRowSorter().convertRowIndexToModel(row);
@@ -2853,11 +2840,11 @@ public class MainFrame extends javax.swing.JFrame {
                 }
             }
         });
-                
+
         popup.add(menuItem);
-        
-        popup.addSeparator();        
-        
+
+        popup.addSeparator();
+
         if (jTable1.getSelectedRowCount() == 1) {
             menuItem = new JMenuItem(java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_Buy..."), this.getImageIcon("/images/16x16/inbox.png"));
 
@@ -2866,7 +2853,7 @@ public class MainFrame extends javax.swing.JFrame {
                 public void actionPerformed(ActionEvent evt) {
                     final int row = jTable1.getSelectedRow();
                     final int modelIndex = jTable1.getRowSorter().convertRowIndexToModel(row);
-                    final Stock stock = ((StockTableModel)tableModel).getStock(modelIndex);
+                    final Stock stock = ((StockTableModel) tableModel).getStock(modelIndex);
 
                     // We have a real nasty bug here. We retrieve stock information through stock code.
                     // When we receive stock information, we update all its particular information, including stock
@@ -2882,54 +2869,55 @@ public class MainFrame extends javax.swing.JFrame {
                     // Say no to : portfolioManagementJPanel.showNewBuyTransactionJDialog(stock.symbol, stock.getLastPrice(), false);
                     portfolioManagementJPanel.showNewBuyTransactionJDialog(stock, stock.getLastPrice(), false);
                 }
-            });  
-            
-            popup.add(menuItem);            
-            
+            });
+
+            popup.add(menuItem);
+
             popup.addSeparator();
-        }                
-        
+        }
+
         menuItem = new JMenuItem(java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_Delete"), this.getImageIcon("/images/16x16/editdelete.png"));
-        
+
         menuItem.addActionListener(new ActionListener() {
             @Override
-        	public void actionPerformed(ActionEvent evt) {
-                    MainFrame.this.deteleSelectedTableRow();
+            public void actionPerformed(ActionEvent evt) {
+                MainFrame.this.deteleSelectedTableRow();
             }
         });
-            
+
         popup.add(menuItem);
-        
+
         return popup;
     }
-    
+
     private class MarketRunnable implements Runnable {
         // 2 seconds.
+
         private static final long MIN_DELAY = 2000;
         private static final long MIN_DELAY_COUNTER = 3;
         private int minDelayCounter = 0;
-        
+
         public MarketRunnable() {
         }
-        
+
         @Override
         public void run() {
             final Thread currentThread = Thread.currentThread();
 
             // Do not rely on isInterrupted flag only. The flag can be cleared by 3rd party easily.
             // Check for current thread as well.
-            while (!currentThread.isInterrupted()  && (marketThread == currentThread)) {
+            while (!currentThread.isInterrupted() && (marketThread == currentThread)) {
                 boolean success = false;
                 final java.util.List<StockServerFactory> stockServerFactories = getStockServerFactories();
-                
+
                 int best = 0;
                 Market bestMarket = null;
-                                                
+
                 for (StockServerFactory factory : stockServerFactories) {
                     MarketServer server = factory.getMarketServer();
-                    
+
                     final Market market = server.getMarket();
-                    
+
                     if (market != null) {
                         // Pretty hacking way to check how good is the returned
                         // result. We should tighten rule for isToleranceAllowed.
@@ -2938,7 +2926,7 @@ public class MainFrame extends javax.swing.JFrame {
                         // 1 good stock within single request. Tighten rule for 
                         // isToleranceAllowed will always fail the entire request
                         // result.
-                        java.util.List<Index> indices = org.yccheok.jstock.engine.Utils.getStockIndices(market.getCountry());                
+                        java.util.List<Index> indices = org.yccheok.jstock.engine.Utils.getStockIndices(market.getCountry());
                         int good = 0;
                         for (Index index : indices) {
                             final double _index = market.getIndex(index);
@@ -2952,15 +2940,15 @@ public class MainFrame extends javax.swing.JFrame {
                             if (best == indices.size()) {
                                 break;
                             }
-                        }                        
+                        }
                     }
                 }
-                
+
                 if (bestMarket != null) {
                     update(bestMarket);
                     success = true;
                 }
-                
+
                 try {
                     if (success) {
                         Thread.sleep(jStockOptions.getScanningSpeed());
@@ -2974,13 +2962,13 @@ public class MainFrame extends javax.swing.JFrame {
                         } else {
                             Thread.sleep(jStockOptions.getScanningSpeed());
                         }
-                    }                    
+                    }
                 } catch (InterruptedException exp) {
                     log.error(null, exp);
                     break;
                 }
             }   // while
-        }            
+        }
     }
 
     private boolean saveStockNameDatabaseAsCSV(Country country, StockNameDatabase stockNameDatabase) {
@@ -2989,14 +2977,14 @@ public class MainFrame extends javax.swing.JFrame {
         boolean result = statements.saveAsCSVFile(stockNameDatabaseCSVFile);
         return result;
     }
-    
+
     private boolean saveStockInfoDatabaseAsCSV(Country country, StockInfoDatabase stockInfoDatabase) {
         final File stockInfoDatabaseCSVFile = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database" + File.separator + "stock-info-database.csv");
         final Statements statements = Statements.newInstanceFromStockInfoDatabase(stockInfoDatabase);
         boolean result = statements.saveAsCSVFile(stockInfoDatabaseCSVFile);
         return result;
     }
-    
+
     private boolean saveUserDefinedDatabaseAsCSV(Country country, StockInfoDatabase stockInfoDatabase) {
         // Previously, we will store the entire stockcodeandsymboldatabase.xml
         // to cloud server if stockcodeandsymboldatabase.xml is containing
@@ -3007,7 +2995,7 @@ public class MainFrame extends javax.swing.JFrame {
         // pairs can be empty. When it is empty, try to delete the file.
         // If deletion fail, we need to overwrite the file to reflect this.
         final File userDefinedDatabaseCSVFile = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database" + File.separator + "user-defined-database.csv");
-        if (pairs.isEmpty()) {            
+        if (pairs.isEmpty()) {
             if (userDefinedDatabaseCSVFile.delete() == true) {
                 return true;
             }
@@ -3017,14 +3005,14 @@ public class MainFrame extends javax.swing.JFrame {
         this.needToSaveUserDefinedDatabase = false;
         return result;
     }
-    
+
     private java.util.List<Pair<Code, Symbol>> loadUserDefinedDatabaseFromCSV(Country country) {
         final File userDefinedDatabaseCSVFile = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database" + File.separator + "user-defined-database.csv");
-        
+
         Statements statements = Statements.newInstanceFromCSVFile(userDefinedDatabaseCSVFile);
         if (statements.getType() != Statement.Type.UserDefinedDatabase) {
             return new ArrayList<Pair<Code, Symbol>>();
-        }        
+        }
         java.util.List<Pair<Code, Symbol>> pairs = new ArrayList<Pair<Code, Symbol>>();
         for (int i = 0, ei = statements.size(); i < ei; i++) {
             Statement statement = statements.get(i);
@@ -3032,19 +3020,19 @@ public class MainFrame extends javax.swing.JFrame {
             Atom atom1 = statement.getAtom(1);
             Code code = Code.newInstance(atom0.getValue().toString());
             Symbol symbol = Symbol.newInstance(atom1.getValue().toString());
-            
+
             pairs.add(new Pair<Code, Symbol>(code, symbol));
         }
         return pairs;
     }
-    
+
     private StockNameDatabase loadStockNameDatabaseFromCSV(Country country) {
         final File stockNameDatabaseCSVFile = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database" + File.separator + "stock-name-database.csv");
-        
+
         Statements statements = Statements.newInstanceFromCSVFile(stockNameDatabaseCSVFile);
         if (statements.getType() != Statement.Type.StockNameDatabase) {
             return null;
-        }        
+        }
         java.util.List<Stock> stocks = new ArrayList<Stock>();
         for (int i = 0, ei = statements.size(); i < ei; i++) {
             Statement statement = statements.get(i);
@@ -3052,17 +3040,17 @@ public class MainFrame extends javax.swing.JFrame {
             Atom atom1 = statement.getAtom(1);
             Code code = Code.newInstance(atom0.getValue().toString());
             String name = atom1.getValue().toString();
-            
+
             // Symbol doesn't matter. Just provide a dummy value for it.
             Stock stock = new Stock.Builder(code, Symbol.newInstance(code.toString())).name(name).build();
             stocks.add(stock);
         }
         return new StockNameDatabase(stocks);
     }
-    
+
     private StockInfoDatabase loadStockInfoDatabaseFromCSV(Country country) {
         final File stockInfoDatabaseCSVFile = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database" + File.separator + "stock-info-database.csv");
-        
+
         Statements statements = Statements.newInstanceFromCSVFile(stockInfoDatabaseCSVFile);
         if (statements.getType() != Statement.Type.StockInfoDatabase) {
             return null;
@@ -3074,7 +3062,7 @@ public class MainFrame extends javax.swing.JFrame {
             Atom atom1 = statement.getAtom(1);
             Atom atom2 = statement.getAtom(2);
             Atom atom3 = statement.getAtom(3);
-            
+
             Code code = Code.newInstance(atom0.getValue().toString());
             Symbol symbol = Symbol.newInstance(atom1.getValue().toString());
             Industry industry = Industry.Unknown;
@@ -3089,22 +3077,22 @@ public class MainFrame extends javax.swing.JFrame {
             } catch (Exception exp) {
                 log.error(null, exp);
             }
-            
+
             Stock stock = new Stock.Builder(code, symbol).board(board).industry(industry).build();
             stocks.add(stock);
         }
         return new StockInfoDatabase(stocks);
     }
-    
+
     // Task to initialize both stockInfoDatabase and stockNameDatabase.
     private class DatabaseTask extends SwingWorker<Boolean, Void> {
+
         private boolean readFromDisk = true;
 
-        public DatabaseTask(boolean readFromDisk)
-        {
+        public DatabaseTask(boolean readFromDisk) {
             this.readFromDisk = readFromDisk;
         }
-        
+
         @Override
         protected void done() {
             // The done Method: When you are informed that the SwingWorker
@@ -3122,7 +3110,7 @@ public class MainFrame extends javax.swing.JFrame {
             }
 
             boolean success = false;
-            
+
             try {
                 success = get();
             } catch (InterruptedException exp) {
@@ -3134,31 +3122,29 @@ public class MainFrame extends javax.swing.JFrame {
                 // well instead of checking on isCancelled. I will do it both.
                 log.error(null, ex);
             }
-           
+
             if (success) {
                 setStatusBar(false, getBestStatusBarMessage());
                 statusBar.setImageIcon(getImageIcon("/images/16x16/network-transmit-receive.png"), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_Connected"));
-            }
-            else {
+            } else {
                 setStatusBar(false, GUIBundle.getString("MainFrame_NetworkError"));
                 statusBar.setImageIcon(getImageIcon("/images/16x16/network-error.png"), java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_DoubleClickedToTryAgain"));
             }
-       }
-       
+        }
+
         @Override
         public Boolean doInBackground() {
             final Country country = jStockOptions.getCountry();
-            
+
             Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database");
 
-            if (this.readFromDisk)
-            {
+            if (this.readFromDisk) {
                 StockInfoDatabase tmp_stock_info_database = loadStockInfoDatabaseFromCSV(country);
                 if (tmp_stock_info_database == null) {
                     // Perhaps we are having a corrupted database. We will 
                     // restore from database.zip.
-                    initPreloadDatabase(true);        
-                    
+                    initPreloadDatabase(true);
+
                     tmp_stock_info_database = loadStockInfoDatabaseFromCSV(country);
                 }
 
@@ -3173,14 +3159,14 @@ public class MainFrame extends javax.swing.JFrame {
                 if (tmp_stock_info_database != null && false == tmp_stock_info_database.isEmpty()) {
                     // Yes. We need to integrate "user-defined-database.csv" into tmp_stock_info_database
                     final java.util.List<Pair<Code, Symbol>> pairs = loadUserDefinedDatabaseFromCSV(country);
-                    
+
                     boolean addUserDefinedStockInfoSuccessAtLeastOnce = false;
-                    
+
                     if (pairs.isEmpty() == false) {
                         // Remove the old user defined database. Legacy stockcodeandsymboldatabase.xml
                         // may contain user defined codes.
                         tmp_stock_info_database.removeAllUserDefinedStockInfos();
-                        
+
                         // Insert with new user defined code.
                         for (Pair<Code, Symbol> pair : pairs) {
                             if (tmp_stock_info_database.addUserDefinedStockInfo(StockInfo.newInstance(pair.first, pair.second))) {
@@ -3195,26 +3181,22 @@ public class MainFrame extends javax.swing.JFrame {
                     }
 
                     // Prepare proper synchronization for us to change country.
-                    synchronized (MainFrame.this.databaseTaskMonitor)
-                    {
-                        if (this.isCancelled() == false)
-                        {
+                    synchronized (MainFrame.this.databaseTaskMonitor) {
+                        if (this.isCancelled() == false) {
                             MainFrame.this.stockInfoDatabase = tmp_stock_info_database;
                             MainFrame.this.stockNameDatabase = tmp_name_database;
                             // Register the auto complete JComboBox with latest database.
-                            ((AutoCompleteJComboBox)MainFrame.this.jComboBox1).setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
+                            ((AutoCompleteJComboBox) MainFrame.this.jComboBox1).setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
                             MainFrame.this.indicatorPanel.setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
-                            
+
                             return true;
-                        }
-                        else
-                        {
+                        } else {
                             return false;
                         }
-                    }                
+                    }
                 }   // if (tmp_stock_info_database != null && false == tmp_stock_info_database.isEmpty())
             }   // if(this.readFromDisk)
-            
+
             // When we fall here, we either fail to read from disk or user
             // explicitly doesn't allow us to read from disk. Let's perform
             // networking stuff.
@@ -3249,7 +3231,7 @@ public class MainFrame extends javax.swing.JFrame {
                         // Remove the old user defined database. Legacy stockcodeandsymboldatabase.xml
                         // may contain user defined codes.
                         tmp_stock_info_database.removeAllUserDefinedStockInfos();
-                        
+
                         // Insert with new user defined code.
                         for (Pair<Code, Symbol> pair : pairs) {
                             tmp_stock_info_database.addUserDefinedStockInfo(StockInfo.newInstance(pair.first, pair.second));
@@ -3257,15 +3239,13 @@ public class MainFrame extends javax.swing.JFrame {
                     }
 
                     // Prepare proper synchronization for us to change country.
-                    synchronized (MainFrame.this.databaseTaskMonitor)
-                    {
-                        if (this.isCancelled() == false)
-                        {
+                    synchronized (MainFrame.this.databaseTaskMonitor) {
+                        if (this.isCancelled() == false) {
                             MainFrame.this.stockInfoDatabase = tmp_stock_info_database;
                             MainFrame.this.stockNameDatabase = tmp_name_database;
 
                             // Register the auto complete JComboBox with latest database.
-                            ((AutoCompleteJComboBox)MainFrame.this.jComboBox1).setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
+                            ((AutoCompleteJComboBox) MainFrame.this.jComboBox1).setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
                             MainFrame.this.indicatorPanel.setStockInfoDatabase(MainFrame.this.stockInfoDatabase);
                             // Yup. The entire operation is success. Do not return
                             // first. We need to save the database as CSV.
@@ -3274,16 +3254,15 @@ public class MainFrame extends javax.swing.JFrame {
                     }
                 }
             }
-             
-            if (success == true)
-            {
-                assert(tmp_stock_info_database.isEmpty() == false);
+
+            if (success == true) {
+                assert (tmp_stock_info_database.isEmpty() == false);
                 MainFrame.this.saveStockInfoDatabaseAsCSV(country, tmp_stock_info_database);
                 if (tmp_name_database != null) {
                     MainFrame.this.saveStockNameDatabaseAsCSV(country, tmp_name_database);
                 }
             }
-            
+
             return success;
         }
     }
@@ -3297,7 +3276,7 @@ public class MainFrame extends javax.swing.JFrame {
         final MouseAdapter mouseAdapter = this.getMyJXStatusBarCountryLabelMouseAdapter();
         this.statusBar.addCountryLabelMouseListener(mouseAdapter);
     }
-    
+
     private void initMyJXStatusBarImageLabelMouseAdapter() {
         final MouseAdapter mouseAdapter = this.getMyJXStatusBarImageLabelMouseAdapter();
         this.statusBar.addImageLabelMouseListener(mouseAdapter);
@@ -3313,7 +3292,7 @@ public class MainFrame extends javax.swing.JFrame {
 
     private void initRealTimeStockMonitor() {
         final RealTimeStockMonitor oldRealTimeStockMonitor = realTimeStockMonitor;
-        if (oldRealTimeStockMonitor != null) {            
+        if (oldRealTimeStockMonitor != null) {
             zombiePool.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -3327,7 +3306,7 @@ public class MainFrame extends javax.swing.JFrame {
         }
 
         realTimeStockMonitor = new RealTimeStockMonitor(4, 20, jStockOptions.getScanningSpeed());
-        
+
         final java.util.List<StockServerFactory> stockServerFactories = getStockServerFactories();
         realTimeStockMonitor.setStockServerFactories(stockServerFactories);
 
@@ -3341,7 +3320,7 @@ public class MainFrame extends javax.swing.JFrame {
     private void initBrokingFirmLogos() {
         final int size = jStockOptions.getBrokingFirmSize();
 
-        for (int i=0; i<size; i++) {
+        for (int i = 0; i < size; i++) {
             try {
                 BufferedImage bufferedImage = ImageIO.read(new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "logos" + File.separator + i + ".png"));
 
@@ -3356,8 +3335,7 @@ public class MainFrame extends javax.swing.JFrame {
         final File f = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config" + File.separator + "mainframe.xml");
         GUIOptions guiOptions = Utils.fromXML(GUIOptions.class, f);
 
-        if (guiOptions == null)
-        {
+        if (guiOptions == null) {
             // When user launches JStock for first time, we will help him to
             // turn off the following column(s), as we feel those information
             // is redundant. If they wish to view those information, they have
@@ -3366,8 +3344,7 @@ public class MainFrame extends javax.swing.JFrame {
             return;
         }
 
-        if (guiOptions.getJTableOptionsSize() <= 0)
-        {
+        if (guiOptions.getJTableOptionsSize() <= 0) {
             // When user launches JStock for first time, we will help him to
             // turn off the following column(s), as we feel those information
             // is redundant. If they wish to view those information, they have
@@ -3385,25 +3362,24 @@ public class MainFrame extends javax.swing.JFrame {
         this.indicatorScannerJPanel.saveGUIOptions();
         this.portfolioManagementJPanel.saveGUIOptions();
     }
-    
+
     private boolean _saveGUIOptions() {
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false)
-        {
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false) {
             return false;
         }
-        
+
         final GUIOptions.JTableOptions jTableOptions = new GUIOptions.JTableOptions();
-        
+
         final int count = this.jTable1.getColumnCount();
         for (int i = 0; i < count; i++) {
             final String name = this.jTable1.getColumnName(i);
             final TableColumn column = jTable1.getColumnModel().getColumn(i);
             jTableOptions.addColumnOption(GUIOptions.JTableOptions.ColumnOption.newInstance(name, column.getWidth()));
         }
-        
+
         final GUIOptions guiOptions = new GUIOptions();
         guiOptions.addJTableOptions(jTableOptions);
-        
+
         File f = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config" + File.separator + "mainframe.xml");
         return Utils.toXML(guiOptions, f);
     }
@@ -3416,8 +3392,7 @@ public class MainFrame extends javax.swing.JFrame {
         final ChartJDialogOptions tmp = Utils.fromXML(ChartJDialogOptions.class, f);
         if (tmp == null) {
             this.chartJDialogOptions = new ChartJDialogOptions();
-        }
-        else {
+        } else {
             this.chartJDialogOptions = tmp;
             log.info("chartJDialogOptions loaded from " + f.toString() + " successfully.");
         }
@@ -3433,15 +3408,14 @@ public class MainFrame extends javax.swing.JFrame {
         if (this.jStockOptions.getScanningSpeed() == 0) {
             this.jStockOptions.setScanningSpeed(5000);
         }
-                
+
         final String proxyHost = this.jStockOptions.getProxyServer();
         final int proxyPort = this.jStockOptions.getProxyPort();
-        
+
         if ((proxyHost.length() > 0) && (org.yccheok.jstock.engine.Utils.isValidPortNumber(proxyPort))) {
             System.getProperties().put("http.proxyHost", proxyHost);
             System.getProperties().put("http.proxyPort", "" + proxyPort);
-        }
-        else {
+        } else {
             System.getProperties().remove("http.proxyHost");
             System.getProperties().remove("http.proxyPort");
         }
@@ -3453,7 +3427,7 @@ public class MainFrame extends javax.swing.JFrame {
             }
             Factories.INSTANCE.updatePrimaryStockServerFactory(country, c);
         }
-    }   
+    }
 
     public void updatePrimaryStockServerFactory(Country country, Class<? extends StockServerFactory> c) {
         // Same. Nothing to be updated.
@@ -3477,8 +3451,8 @@ public class MainFrame extends javax.swing.JFrame {
         this.lastUpdateDate = null;
         initCSVWatchlist();
     }
-    
-    private boolean initCSVWatchlist() {  
+
+    private boolean initCSVWatchlist() {
         java.util.List<String> availableWatchlistNames = org.yccheok.jstock.watchlist.Utils.getWatchlistNames();
         // Do we have any watchlist for this country?
         if (availableWatchlistNames.size() <= 0) {
@@ -3486,33 +3460,32 @@ public class MainFrame extends javax.swing.JFrame {
             org.yccheok.jstock.watchlist.Utils.createEmptyWatchlist(org.yccheok.jstock.watchlist.Utils.getDefaultWatchlistName());
             availableWatchlistNames = org.yccheok.jstock.watchlist.Utils.getWatchlistNames();
         }
-        assert(availableWatchlistNames.isEmpty() == false);
+        assert (availableWatchlistNames.isEmpty() == false);
 
         // Is user selected watchlist name within current available watchlist names?
         if (false == availableWatchlistNames.contains(jStockOptions.getWatchlistName())) {
             // Nope. Reset user selected watchlist name to the first available name.
             jStockOptions.setWatchlistName(availableWatchlistNames.get(0));
         }
-        
+
         // openAsCSVFile will "append" stocks. We need to clear previous stocks
         // explicitly.
-        
+
         // Clear the previous data structures.
         clearAllStocks();
-        
+
         File realTimeStockFile = org.yccheok.jstock.watchlist.Utils.getWatchlistFile(org.yccheok.jstock.watchlist.Utils.getWatchlistDirectory());
         return this.openAsCSVFile(realTimeStockFile);
     }
-    
+
     public static boolean saveCSVWatchlist(String directory, CSVWatchlist csvWatchlist) {
-        assert(directory.endsWith(File.separator));
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(directory) == false)
-        {
+        assert (directory.endsWith(File.separator));
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(directory) == false) {
             return false;
-        } 
+        }
         return MainFrame.saveAsCSVFile(csvWatchlist, org.yccheok.jstock.watchlist.Utils.getWatchlistFile(directory), true);
     }
-    
+
     private boolean saveCSVWathclist() {
         final String directory = org.yccheok.jstock.watchlist.Utils.getWatchlistDirectory();
         final TableModel tableModel = jTable1.getModel();
@@ -3523,42 +3496,41 @@ public class MainFrame extends javax.swing.JFrame {
     private boolean saveWatchlist() {
         return this.saveCSVWathclist();
     }
-    
+
     private boolean saveBrokingFirmLogos() {
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "logos") == false)
-        {
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "logos") == false) {
             return false;
         }
-        
+
         if (Utils.deleteDir(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "logos", false) == false) {
             return false;
         }
-        
+
         final int size = this.jStockOptions.getBrokingFirmSize();
 
-        for(int i=0; i<size; i++) {
+        for (int i = 0; i < size; i++) {
             final Image image = jStockOptions.getBrokingFirm(i).getLogo();
-            
-            if(image == null) continue;
-            
+
+            if (image == null) {
+                continue;
+            }
+
             File f = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "logos" + File.separator + i + ".png");
-                       
+
             try {
                 ImageIO.write(Utils.toBufferedImage(image), "png", f);
-            }
-            catch (java.io.IOException exp) {
+            } catch (java.io.IOException exp) {
                 log.error(null, exp);
             }
         }
-        
+
         return true;
     }
 
     private boolean saveDatabase() {
         final Country country = jStockOptions.getCountry();
-            
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database") == false)
-        {
+
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + country + File.separator + "database") == false) {
             return false;
         }
 
@@ -3574,15 +3546,13 @@ public class MainFrame extends javax.swing.JFrame {
             b0 = statements.saveAsCSVFile(stockNameDatabaseCSVFile);
         }
 
-        if (stock_info_database == null)
-        {
+        if (stock_info_database == null) {
             return false;
         }
 
         // This could happen when OutOfMemoryException happen while fetching stock database information
         // from the server.
-        if (stock_info_database.isEmpty())
-        {
+        if (stock_info_database.isEmpty()) {
             log.info("Database was corrupted.");
             return false;
         }
@@ -3617,11 +3587,11 @@ public class MainFrame extends javax.swing.JFrame {
 
     /**
      * Save chart dialog options to disc.
+     *
      * @return <tt>true</tt> if saving operation is success
      */
     private boolean saveChartJDialogOptions() {
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false)
-        {
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false) {
             return false;
         }
 
@@ -3631,14 +3601,14 @@ public class MainFrame extends javax.swing.JFrame {
 
     /**
      * Save JStock options to disc.
+     *
      * @return <tt>true</tt> if saving operation is success
      */
     private boolean saveJStockOptions() {
-        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false)
-        {
+        if (Utils.createCompleteDirectoryHierarchyIfDoesNotExist(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config") == false) {
             return false;
         }
-        
+
         File f = new File(org.yccheok.jstock.gui.Utils.getUserDataDirectory() + "config" + File.separator + "options.xml");
         return org.yccheok.jstock.gui.Utils.toXML(this.jStockOptions, f);
     }
@@ -3653,8 +3623,7 @@ public class MainFrame extends javax.swing.JFrame {
         alertStateManager.attach(alertStateManagerObserver);
     }
 
-    private void initOthersStockHistoryMonitor()
-    {
+    private void initOthersStockHistoryMonitor() {
         final java.util.List<StockServerFactory> stockServerFactories = getStockServerFactories();
 
         this.indicatorPanel.initStockHistoryMonitor(Collections.unmodifiableList(stockServerFactories));
@@ -3666,7 +3635,7 @@ public class MainFrame extends javax.swing.JFrame {
     // are not affected.
     private void initStockHistoryMonitor() {
         final StockHistoryMonitor oldStockHistoryMonitor = stockHistoryMonitor;
-        if (oldStockHistoryMonitor != null) {            
+        if (oldStockHistoryMonitor != null) {
             zombiePool.execute(new Runnable() {
                 @Override
                 public void run() {
@@ -3678,12 +3647,12 @@ public class MainFrame extends javax.swing.JFrame {
                 }
             });
         }
-        
+
         this.stockHistoryMonitor = new StockHistoryMonitor(HISTORY_MONITOR_MAX_THREAD);
-        
+
         final java.util.List<StockServerFactory> stockServerFactories = getStockServerFactories();
         stockHistoryMonitor.setStockServerFactories(stockServerFactories);
-        
+
         stockHistoryMonitor.attach(this.stockHistoryMonitorObserver);
 
         final Country country = jStockOptions.getCountry();
@@ -3698,37 +3667,30 @@ public class MainFrame extends javax.swing.JFrame {
     }
 
     // Determine whether we should make use of KLSEInfoStockServerFactory.
-    private void initKLSEInfoStockServerFactoryThread()
-    {
+    private void initKLSEInfoStockServerFactoryThread() {
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
                 final String remove = org.yccheok.jstock.gui.Utils.getUUIDValue(org.yccheok.jstock.network.Utils.getURL(org.yccheok.jstock.network.Utils.Type.OPTIONS), "remove_klse_info_stock_server_factory");
-                if (remove != null && remove.equals("1"))
-                {
+                if (remove != null && remove.equals("1")) {
                     Factories.INSTANCE.removeKLSEInfoStockServerFactory();
                 }
-            }            
+            }
         };
-        
+
         this.klseInfoStockServerFactoryThread = new Thread(runnable);
         this.klseInfoStockServerFactoryThread.start();
     }
-    
-    public void initLatestNewsTask()
-    {
-        if (jStockOptions.isAutoUpdateNewsEnabled() == true)
-        {
-            if (latestNewsTask == null)
-            {
+
+    public void initLatestNewsTask() {
+        if (jStockOptions.isAutoUpdateNewsEnabled() == true) {
+            if (latestNewsTask == null) {
                 latestNewsTask = new LatestNewsTask();
                 latestNewsTask.execute();
             }
-        }
-        else
-        {
+        } else {
             final LatestNewsTask oldLatestNewsTask = latestNewsTask;
-            if (oldLatestNewsTask != null) {                
+            if (oldLatestNewsTask != null) {
                 zombiePool.execute(new Runnable() {
                     @Override
                     public void run() {
@@ -3742,7 +3704,7 @@ public class MainFrame extends javax.swing.JFrame {
             }
         }
     }
-    
+
     private void initMarketThread() {
         final Thread oldMarketThread = marketThread;
         if (oldMarketThread != null) {
@@ -3758,13 +3720,13 @@ public class MainFrame extends javax.swing.JFrame {
                     }
                     log.info("Shut down market thread " + oldMarketThread + " peacefully.");
                 }
-            });            
+            });
         }
-        
+
         this.marketThread = new Thread(new MarketRunnable());
         this.marketThread.start();
     }
-    
+
     private void initDatabase(boolean readFromDisk) {
         // Update GUI state.
         this.setStatusBar(true, GUIBundle.getString("MainFrame_ConnectingToStockServerToRetrieveStockInformation..."));
@@ -3773,17 +3735,15 @@ public class MainFrame extends javax.swing.JFrame {
         // Stop any on-going activities.
         // Entire block will be synchronized, as we do not want to hit by more
         // than 1 databaseTask running.
-        synchronized (this.databaseTaskMonitor)
-        {
-            if (this.databaseTask != null)
-            {
+        synchronized (this.databaseTaskMonitor) {
+            if (this.databaseTask != null) {
                 this.databaseTask.cancel(true);
                 this.stockInfoDatabase = null;
                 this.stockNameDatabase = null;
-                ((AutoCompleteJComboBox)this.jComboBox1).setStockInfoDatabase(null);
+                ((AutoCompleteJComboBox) this.jComboBox1).setStockInfoDatabase(null);
                 this.indicatorPanel.setStockInfoDatabase(null);
             }
-            
+
             this.databaseTask = new DatabaseTask(readFromDisk);
             this.databaseTask.execute();
         }
@@ -3791,20 +3751,20 @@ public class MainFrame extends javax.swing.JFrame {
         // We may hold a large database previously. Invoke garbage collector to perform cleanup.
         System.gc();
     }
-        
-    private void update(RealTimeStockMonitor monitor, final java.util.List<Stock> stocks) { 
+
+    private void update(RealTimeStockMonitor monitor, final java.util.List<Stock> stocks) {
         // We need to ignore symbol names given by stock server. Replace them
         // with database's.
-        final boolean isSymbolImmutable = org.yccheok.jstock.engine.Utils.isSymbolImmutable();                
+        final boolean isSymbolImmutable = org.yccheok.jstock.engine.Utils.isSymbolImmutable();
         for (int i = 0, size = stocks.size(); i < size; i++) {
             final Stock stock = stocks.get(i);
             Stock new_stock = stock;
             // Sometimes server goes crazy by returning empty symbol.
-            if (isSymbolImmutable || new_stock.symbol.toString().isEmpty()) {                
+            if (isSymbolImmutable || new_stock.symbol.toString().isEmpty()) {
                 // Use local variable to ensure thread safety.
                 final StockInfoDatabase stock_info_database = this.stockInfoDatabase;
                 //final StockNameDatabase name_database = this.stockNameDatabase;
-                
+
                 if (stock_info_database != null) {
                     final Symbol symbol = stock_info_database.codeToSymbol(stock.code);
                     if (symbol != null) {
@@ -3816,7 +3776,7 @@ public class MainFrame extends javax.swing.JFrame {
                 } else {
                     // stockCodeAndSymbolDatabase is not ready yet. Use the information
                     // from stock table.
-                    final StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+                    final StockTableModel tableModel = (StockTableModel) jTable1.getModel();
                     final int row = tableModel.findRow(stock);
                     if (row >= 0) {
                         final Symbol symbol = tableModel.getStock(row).symbol;
@@ -3852,7 +3812,7 @@ public class MainFrame extends javax.swing.JFrame {
                 }
             }   // if (isSymbolImmutable || new_stock.symbol.toString().isEmpty())
         }   // for (int i = 0, size = stocks.size(); i < size; i++)
-        
+
         // Update status bar with current time string.
         this.lastUpdateDate = new Date();
         MainFrame.getInstance().updateStatusBarWithLastUpdateDateMessageIfPossible();
@@ -3865,12 +3825,12 @@ public class MainFrame extends javax.swing.JFrame {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                for (Stock stock : stocks) {                    
+                for (Stock stock : stocks) {
                     updateStockToTable(stock);
                     if (isStockBeingSelected(stock)) {
                         MainFrame.this.updateDynamicChart(stock);
                     }
-                }               
+                }
             }
         });
 
@@ -3883,8 +3843,7 @@ public class MainFrame extends javax.swing.JFrame {
                 if (this.dynamicCharts.size() <= MainFrame.MAX_DYNAMIC_CHART_SIZE) {
                     dynamicChart = new DynamicChart();
                     this.dynamicCharts.put(code, dynamicChart);
-                }
-                else {
+                } else {
                     // Full already. Shall we remove?
                     if (this.isStockBeingSelected(stock)) {
                         Set<Code> codes = this.dynamicCharts.keySet();
@@ -3918,8 +3877,7 @@ public class MainFrame extends javax.swing.JFrame {
                         MainFrame.this.updateDynamicChart(s);
                     }
                 });
-            }
-            else {
+            } else {
                 // Although no one is watching at us, we still need to perform notification.
                 // Weird?
                 dynamicChart.addPriceObservation(stock.getTimestamp(), stock.getLastPrice());
@@ -3931,16 +3889,15 @@ public class MainFrame extends javax.swing.JFrame {
             return;
         }
 
-        final StockTableModel stockTableModel = (StockTableModel)jTable1.getModel();
+        final StockTableModel stockTableModel = (StockTableModel) jTable1.getModel();
 
         for (Stock stock : stocks) {
-            final Double fallBelow = stockTableModel.getFallBelow(stock);            
+            final Double fallBelow = stockTableModel.getFallBelow(stock);
             if (fallBelow != null) {
                 final Indicator indicator = Utils.getLastPriceFallBelowIndicator(fallBelow);
                 indicator.setStock(stock);
                 alertStateManager.alert(indicator);
-            }
-            else {
+            } else {
                 /*
                  * Having FALL_BELOW_INDICATOR and RISE_ABOVE_INDICATOR, is to enable us
                  * to remove a particular indicator from AlertStateManager, without the need
@@ -3961,8 +3918,7 @@ public class MainFrame extends javax.swing.JFrame {
                 final Indicator indicator = Utils.getLastPriceRiseAboveIndicator(riseAbove);
                 indicator.setStock(stock);
                 alertStateManager.alert(indicator);
-            }
-            else {
+            } else {
                 /*
                  * Having FALL_BELOW_INDICATOR and RISE_ABOVE_INDICATOR, is to enable us
                  * to remove a particular indicator from AlertStateManager, without the need
@@ -3987,22 +3943,22 @@ public class MainFrame extends javax.swing.JFrame {
             this.refreshPriceInProgress = false;
             return;
         }
-        
+
         if (this.isStatusBarBusy) {
             return;
         }
-        
+
         if (this.getSelectedComponent() != this.jPanel8 && this.getSelectedComponent() != this.portfolioManagementJPanel) {
             return;
         }
-        
+
         this.setStatusBar(false, getBestStatusBarMessage());
     }
-    
+
     // Connected
     // [My Watchlist] Last update: Connected
     // [My Watchlist] Last update: 10:40AM
-    public String getBestStatusBarMessage() {        
+    public String getBestStatusBarMessage() {
         final String currentName;
         final Date _lastUpdateDate;
         // MainFrame
@@ -4015,15 +3971,15 @@ public class MainFrame extends javax.swing.JFrame {
         } else {
             return GUIBundle.getString("MainFrame_Connected");
         }
-        
+
         if (_lastUpdateDate == null) {
-            return MessageFormat.format(GUIBundle.getString("MainFrame_Connected_template"), currentName);            
+            return MessageFormat.format(GUIBundle.getString("MainFrame_Connected_template"), currentName);
         }
-        
+
         final String time = Utils.getLastUpdateTimeFormat().format(_lastUpdateDate);
         return MessageFormat.format(GUIBundle.getString("MainFrame_LastUpdate_template"), currentName, time);
     }
-    
+
     private void update(final Market market) {
         // We are only interested in current selected country.
         if (market.getCountry() != this.jStockOptions.getCountry()) {
@@ -4033,11 +3989,11 @@ public class MainFrame extends javax.swing.JFrame {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-               marketJPanel.update(market);
+                marketJPanel.update(market);
             }
         });
     }
-    
+
     public void update(StockHistoryMonitor monitor, final StockHistoryMonitor.StockHistoryRunnable runnable) {
         javax.swing.SwingUtilities.invokeLater(new Runnable() {
             @Override
@@ -4053,63 +4009,60 @@ public class MainFrame extends javax.swing.JFrame {
                     symbol = stock_info_database.codeToSymbol(code);
                 }
                 final boolean shouldShowGUI = MainFrame.this.stockCodeHistoryGUI.remove(code);
-               
+
                 if (stockCodeHistoryGUI.isEmpty()) {
                     if (runnable.getStockHistoryServer() != null) {
                         final String template = GUIBundle.getString("MainFrame_HistorySuccess_template");
                         final String message = MessageFormat.format(template, (symbol != null ? symbol : code));
                         setStatusBar(false, message);
-                    }
-                    else {
+                    } else {
                         final String template = GUIBundle.getString("MainFrame_HistoryFailed_template");
                         final String message = MessageFormat.format(template, (symbol != null ? symbol : code));
                         setStatusBar(false, message);
                     }
-                }
-                else {
+                } else {
                     if (runnable.getStockHistoryServer() != null) {
                         final String template = GUIBundle.getString("MainFrame_HistorySuccessStillWaitingForHistoryTotal_template");
                         final String message = MessageFormat.format(template, (symbol != null ? symbol : code), stockCodeHistoryGUI.size());
                         setStatusBar(true, message);
-                    }
-                    else {
+                    } else {
                         final String template = GUIBundle.getString("MainFrame_HistoryFailedStillWaitingForHistoryTotal_template");
                         final String message = MessageFormat.format(template, (symbol != null ? symbol : code), stockCodeHistoryGUI.size());
                         setStatusBar(true, message);
                     }
                 }
-               
+
                 if ((runnable.getStockHistoryServer() != null) && shouldShowGUI) {
                     ChartJDialog chartJDialog = new ChartJDialog(MainFrame.this, (symbol != null ? symbol : code) + " (" + code + ")", false, runnable.getStockHistoryServer());
                     chartJDialog.setVisible(true);
                 }
-           } 
+            }
         });
     }
-    
+
     private ImageIcon getImageIcon(String imageIcon) {
         return new javax.swing.ImageIcon(getClass().getResource(imageIcon));
     }
-    
+
     private class TableRowPopupListener extends MouseAdapter {
-        
+
         @Override
         public void mouseClicked(MouseEvent evt) {
             int[] rows = MainFrame.this.jTable1.getSelectedRows();
-            
+
             if (rows.length == 1) {
                 int row = rows[0];
-                
-                StockTableModel tableModel = (StockTableModel)jTable1.getModel();
+
+                StockTableModel tableModel = (StockTableModel) jTable1.getModel();
                 int modelIndex = jTable1.convertRowIndexToModel(row);
                 Stock stock = tableModel.getStock(modelIndex);
                 updateDynamicChart(stock);
             } else {
                 updateDynamicChart(null);
-                
+
             }
         }
-        
+
         @Override
         public void mousePressed(MouseEvent e) {
             maybeShowPopup(e);
@@ -4134,10 +4087,9 @@ public class MainFrame extends javax.swing.JFrame {
         // Current column whose tooltip is being displayed.
         // This variable is used to minimize the calls to setToolTipText().
         TableColumn curCol;
-    
         // Maps TableColumn objects to tooltips
         java.util.Map<TableColumn, String> tips = new HashMap<TableColumn, String>();
-    
+
         // If tooltip is null, removes any tooltip text.
         public void setToolTip(TableColumn col, String tooltip) {
             if (tooltip == null) {
@@ -4146,38 +4098,35 @@ public class MainFrame extends javax.swing.JFrame {
                 tips.put(col, tooltip);
             }
         }
-    
+
         @Override
         public void mouseMoved(MouseEvent evt) {
             TableColumn col = null;
-            JTableHeader header = (JTableHeader)evt.getSource();
+            JTableHeader header = (JTableHeader) evt.getSource();
             JTable table = header.getTable();
             TableColumnModel colModel = table.getColumnModel();
             int vColIndex = colModel.getColumnIndexAtX(evt.getX());
-    
+
             // Return if not clicked on any column header
             if (vColIndex >= 0) {
                 col = colModel.getColumn(vColIndex);
             }
-    
+
             if (col != curCol) {
-                header.setToolTipText((String)tips.get(col));
+                header.setToolTipText((String) tips.get(col));
                 curCol = col;
             }
         }
     }
-    
+
     public void displayPopupMessage(final String caption, final String message) {
         if (trayIcon == null) {
             return;
         }
 
-        if (SwingUtilities.isEventDispatchThread())
-        {
+        if (SwingUtilities.isEventDispatchThread()) {
             trayIcon.displayMessage(caption, message, TrayIcon.MessageType.INFO);
-        }
-        else
-        {
+        } else {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
@@ -4186,12 +4135,11 @@ public class MainFrame extends javax.swing.JFrame {
             });
         }
     }
-    
-    public IndicatorProjectManager getAlertIndicatorProjectManager()
-    {
+
+    public IndicatorProjectManager getAlertIndicatorProjectManager() {
         return this.indicatorPanel.getAlertIndicatorProjectManager();
     }
-    
+
     public void updateScanningSpeed(int speed) {
         this.realTimeStockMonitor.setDelay(speed);
         indicatorScannerJPanel.updateScanningSpeed(speed);
@@ -4200,8 +4148,7 @@ public class MainFrame extends javax.swing.JFrame {
     public void updateHistoryDuration(Duration historyDuration) {
         final Duration oldDuration = stockHistoryMonitor.getDuration();
 
-        if (oldDuration.isContains(historyDuration))
-        {
+        if (oldDuration.isContains(historyDuration)) {
             this.stockHistoryMonitor.setDuration(historyDuration);
             return;
         }
@@ -4212,8 +4159,7 @@ public class MainFrame extends javax.swing.JFrame {
         log.info("We are going to remove all history files, due to new duration " + historyDuration + " is not within old duration " + oldDuration);
 
         Country[] countries = Country.values();
-        for (Country country : countries)
-        {
+        for (Country country : countries) {
             Utils.deleteDir(Utils.getUserDataDirectory() + country + File.separator + "history", false);
         }
 
@@ -4226,23 +4172,20 @@ public class MainFrame extends javax.swing.JFrame {
 
     public void repaintTable() {
         Component c = getSelectedComponent();
-        
-        if(c instanceof IndicatorScannerJPanel) {
+
+        if (c instanceof IndicatorScannerJPanel) {
             indicatorScannerJPanel.repaintTable();
-        }
-        else if(c instanceof IndicatorPanel) {
-            
-        }
-        else {
+        } else if (c instanceof IndicatorPanel) {
+        } else {
             this.jTable1.repaint();
         }
     }
-    
+
     private void initMarketJPanel() {
         if (this.marketJPanel != null) {
-            jPanel2.remove(marketJPanel);            
+            jPanel2.remove(marketJPanel);
         }
-        
+
         this.marketJPanel = new MarketJPanel(jStockOptions.getCountry());
         jPanel2.add(marketJPanel);
         jPanel2.revalidate();
@@ -4255,9 +4198,9 @@ public class MainFrame extends javax.swing.JFrame {
 
     private class LatestNewsTask extends SwingWorker<Void, String> {
         // Delay first update checking for 20 seconds.
-        private static final int SHORT_DELAY = 20 * 1000;
 
-        private volatile CountDownLatch doneSignal;       
+        private static final int SHORT_DELAY = 20 * 1000;
+        private volatile CountDownLatch doneSignal;
 
         @Override
         protected void done() {
@@ -4267,24 +4210,21 @@ public class MainFrame extends javax.swing.JFrame {
         protected void process(java.util.List<String> messages) {
             boolean show = false;
 
-            for (String message : messages)
-            {
+            for (String message : messages) {
                 AutoUpdateNewsJDialog dialog = new AutoUpdateNewsJDialog(MainFrame.this, true);
                 dialog.setNews(message);
                 dialog.setVisible(true);
                 show = true;
             }
 
-            if (show)
-            {
+            if (show) {
                 doneSignal.countDown();
             }
         }
 
         @Override
         protected Void doInBackground() {
-            while (!isCancelled())
-            {
+            while (!isCancelled()) {
                 try {
                     Thread.sleep(SHORT_DELAY);
                 } catch (InterruptedException ex) {
@@ -4303,12 +4243,10 @@ public class MainFrame extends javax.swing.JFrame {
                 }
                 doneSignal = new CountDownLatch(1);
                 final String respond = org.yccheok.jstock.gui.Utils.getResponseBodyAsStringBasedOnProxyAuthOption(location);
-                if (respond == null)
-                {                    
+                if (respond == null) {
                     break;
                 }
-                if (respond.indexOf(Utils.getJStockUUID()) < 0)
-                {
+                if (respond.indexOf(Utils.getJStockUUID()) < 0) {
                     break;
                 }
                 publish(respond);
@@ -4346,33 +4284,28 @@ public class MainFrame extends javax.swing.JFrame {
         return new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (MainFrame.this.jTabbedPane1.getIconAt(4) == MainFrame.this.smileIcon)
-                {
-                   MainFrame.this.jTabbedPane1.setIconAt(4, smileGrayIcon);
-                }
-                else
-                {
+                if (MainFrame.this.jTabbedPane1.getIconAt(4) == MainFrame.this.smileIcon) {
+                    MainFrame.this.jTabbedPane1.setIconAt(4, smileGrayIcon);
+                } else {
                     MainFrame.this.jTabbedPane1.setIconAt(4, smileIcon);
                 }
             }
         };
     }
-    
+
     public void initDynamicChartVisibility() {
         jPanel10.setVisible(this.jStockOptions.isDynamicChartVisible());
     }
 
-    private void initDynamicCharts()
-    {
+    private void initDynamicCharts() {
         dynamicCharts.clear();
     }
 
-    private void initStatusBar()
-    {
+    private void initStatusBar() {
         final String message = java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_ConnectingToStockServerToRetrieveStockInformation...");
         final ImageIcon icon = getImageIcon("/images/16x16/network-connecting.png");
         final String iconMessage = java.util.ResourceBundle.getBundle("org/yccheok/jstock/data/gui").getString("MainFrame_Connecting...");
-        
+
         statusBar.setMainMessage(message)
                 .setImageIcon(icon, iconMessage)
                 .setCountryIcon(jStockOptions.getCountry().getIcon(), jStockOptions.getCountry().toString());
@@ -4408,39 +4341,40 @@ public class MainFrame extends javax.swing.JFrame {
             // Shall we provide visualize mouse move over effect, so that user
             // knows this is a clickable component?
             /*
-            private final LineBorder lineBorder = new LineBorder(Color.WHITE);
-            private Border oldBorder = null;
+             private final LineBorder lineBorder = new LineBorder(Color.WHITE);
+             private Border oldBorder = null;
 
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                JPanel jPanel = (JPanel)e.getComponent();
-                Border old = jPanel.getBorder();
-                if (old != lineBorder) {
-                    oldBorder = old;
-                }
-                jPanel.setBorder(lineBorder);
-            }
+             @Override
+             public void mouseEntered(MouseEvent e) {
+             JPanel jPanel = (JPanel)e.getComponent();
+             Border old = jPanel.getBorder();
+             if (old != lineBorder) {
+             oldBorder = old;
+             }
+             jPanel.setBorder(lineBorder);
+             }
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                JPanel jPanel = (JPanel)e.getComponent();
-                jPanel.setBorder(oldBorder);
-            }
-            */
+             @Override
+             public void mouseExited(MouseEvent e) {
+             JPanel jPanel = (JPanel)e.getComponent();
+             jPanel.setBorder(oldBorder);
+             }
+             */
         };
     }
 
     private class TableKeyEventListener extends java.awt.event.KeyAdapter {
+
         @Override
         public void keyTyped(java.awt.event.KeyEvent e) {
             MainFrame.this.jTable1.getSelectionModel().clearSelection();
         }
     }
-    
+
     private void refreshCurrencyExchangeMonitor() {
         this.portfolioManagementJPanel.refreshCurrencyExchangeMonitor();
     }
-    
+
     public void refreshAllRealTimeStockMonitors() {
         RealTimeStockMonitor _realTimeStockMonitor = this.realTimeStockMonitor;
         if (_realTimeStockMonitor != null) {
@@ -4449,53 +4383,38 @@ public class MainFrame extends javax.swing.JFrame {
         this.indicatorScannerJPanel.refreshRealTimeStockMonitor();
         this.portfolioManagementJPanel.refreshRealTimeStockMonitor();
     }
-    
     private TrayIcon trayIcon;
-    
     private static final Log log = LogFactory.getLog(MainFrame.class);
-        
     private MyJXStatusBar statusBar = new MyJXStatusBar();
     private boolean isStatusBarBusy = false;
-    
     // A set of stock history which we need to display GUI on them, when user request explicitly.
     private java.util.Set<Code> stockCodeHistoryGUI = new java.util.HashSet<Code>();
-    
     private volatile StockInfoDatabase stockInfoDatabase = null;
     // StockNameDatabase is an optional item.
     private volatile StockNameDatabase stockNameDatabase = null;
-    
     private RealTimeStockMonitor realTimeStockMonitor = null;
     private StockHistoryMonitor stockHistoryMonitor = null;
-
     private DatabaseTask databaseTask = null;
     private final Object databaseTaskMonitor = new Object();
-
     private LatestNewsTask latestNewsTask = null;
     private volatile Thread marketThread = null;
-    private Thread klseInfoStockServerFactoryThread = null;   
+    private Thread klseInfoStockServerFactoryThread = null;
     private JStockOptions jStockOptions;
     private ChartJDialogOptions chartJDialogOptions;
-    
     private IndicatorPanel indicatorPanel;
     private IndicatorScannerJPanel indicatorScannerJPanel;
     private PortfolioManagementJPanel portfolioManagementJPanel;
-
     private final AlertStateManager alertStateManager = new AlertStateManager();
     private ExecutorService emailAlertPool = Executors.newFixedThreadPool(1);
     private ExecutorService smsAlertPool = Executors.newFixedThreadPool(1);
     private ExecutorService systemTrayAlertPool = Executors.newFixedThreadPool(1);
-
     private final org.yccheok.jstock.engine.Observer<RealTimeStockMonitor, java.util.List<Stock>> realTimeStockMonitorObserver = this.getRealTimeStockMonitorObserver();
     private final org.yccheok.jstock.engine.Observer<StockHistoryMonitor, StockHistoryMonitor.StockHistoryRunnable> stockHistoryMonitorObserver = this.getStockHistoryMonitorObserver();
     private final org.yccheok.jstock.engine.Observer<Indicator, Boolean> alertStateManagerObserver = this.getAlertStateManagerObserver();
-
     private final javax.swing.ImageIcon smileIcon = this.getImageIcon("/images/16x16/smile.png");
     private final javax.swing.ImageIcon smileGrayIcon = this.getImageIcon("/images/16x16/smile-gray.png");
-
     private Executor zombiePool = Utils.getZoombiePool();
-    
     private MarketJPanel marketJPanel;
-
     // Use ConcurrentHashMap, enable us able to read and write using different
     // threads.
     private java.util.Map<Code, DynamicChart> dynamicCharts = new java.util.concurrent.ConcurrentHashMap<Code, DynamicChart>();
@@ -4504,7 +4423,6 @@ public class MainFrame extends javax.swing.JFrame {
     private static final int MAX_DYNAMIC_CHART_SIZE = 10;
     private static final DynamicChart EMPTY_DYNAMIC_CHART = new DynamicChart();
     private final MouseAdapter dynamicChartMouseAdapter = getDynamicChartMouseAdapter();
-    
     private static final int HISTORY_MONITOR_MAX_THREAD = 4;
 
     /*
@@ -4521,17 +4439,13 @@ public class MainFrame extends javax.swing.JFrame {
      */
     private static final Indicator FALL_BELOW_INDICATOR = Utils.getLastPriceFallBelowIndicator(0.0);
     private static final Indicator RISE_ABOVE_INDICATOR = Utils.getLastPriceRiseAboveIndicator(0.0);
-
     // Do we need to save user defined database when we switch country or close
     // this application?
     private volatile boolean needToSaveUserDefinedDatabase = false;
-
     private volatile boolean isFormWindowClosedCalled = false;
-    
     // The last time when we receive stock price update.
     private Date lastUpdateDate = null;
     private boolean refreshPriceInProgress = false;
-    
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.ButtonGroup buttonGroup1;
     private javax.swing.ButtonGroup buttonGroup2;
@@ -4560,6 +4474,7 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JMenuItem jMenuItem15;
     private javax.swing.JMenuItem jMenuItem16;
     private javax.swing.JMenuItem jMenuItem17;
+    private javax.swing.JMenuItem jMenuItem18;
     private javax.swing.JMenuItem jMenuItem2;
     private javax.swing.JMenuItem jMenuItem3;
     private javax.swing.JMenuItem jMenuItem4;
@@ -4587,5 +4502,4 @@ public class MainFrame extends javax.swing.JFrame {
     private javax.swing.JTabbedPane jTabbedPane1;
     private javax.swing.JTable jTable1;
     // End of variables declaration//GEN-END:variables
-    
 }

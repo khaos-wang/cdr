@@ -831,6 +831,15 @@ public class Utils {
         final JStockOptions jStockOptions = MainFrame.getInstance().getJStockOptions();
         return Utils.getUserDataDirectory() + jStockOptions.getCountry() + File.separator + "history";
     }
+    
+    /**
+     * Returns cached history files directory.
+     * @return cached history files directory
+     */
+    public static String getCDRDirectory() {
+        final JStockOptions jStockOptions = MainFrame.getInstance().getJStockOptions();
+        return Utils.getUserDataDirectory() + jStockOptions.getCountry() + File.separator + "cdr";
+    }
 
     public static AlphaComposite makeComposite(float alpha) {
         int type = AlphaComposite.SRC_OVER;

@@ -13,6 +13,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Vector;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,7 +43,7 @@ public class CDRSettings {
         final JStockOptions jStockOptions = MainFrame.getInstance().getJStockOptions();
         return org.yccheok.jstock.gui.Utils.getUserDataDirectory() + jStockOptions.getCountry() + File.separator + "cdr" + File.separator;
     }
-    public Vector<StockInfo> references = new Vector<StockInfo>();
+    public List<StockInfo> references = new ArrayList<StockInfo>();
     public SimpleDate baseDate = new SimpleDate(2009, 0, 1);
 
     @Override

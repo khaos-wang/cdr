@@ -15,6 +15,7 @@ import org.yccheok.jstock.file.Statements;
  */
 public class SuperStockHistoryServer implements StockHistoryServer {
 
+    private Code code;
     private StockHistoryServer stockHistoryServer;
     private StatementsStockHistoryServer statementsServer;
 
@@ -23,6 +24,7 @@ public class SuperStockHistoryServer implements StockHistoryServer {
     }
 
     public SuperStockHistoryServer(StockServerFactory factory, Code code, Duration duration) throws StockHistoryNotFoundException {
+        this.code = code;
         final String prefix = code.toString();
         final String directory = org.yccheok.jstock.gui.Utils.getHistoryDirectory();
         File dir = new File(directory);
@@ -51,6 +53,7 @@ public class SuperStockHistoryServer implements StockHistoryServer {
             final Calendar calendar = Calendar.getInstance();
             calendar.setTimeInMillis(this.statementsServer.getTimestamp(this.statementsServer.size() - 1));
             calendar.add(Calendar.DAY_OF_MONTH, 1);
+
             final SimpleDate start = new SimpleDate(calendar);
             if (start.compareTo(duration.getEndDate()) < 0) {
                 Duration subDuration = new Duration(start, duration.getEndDate());
@@ -62,6 +65,10 @@ public class SuperStockHistoryServer implements StockHistoryServer {
 
         if (this.stockHistoryServer == null && this.statementsServer == null) {
             throw new StockHistoryNotFoundException("Can't get history server");
+        }
+        
+        if (this.stockHistoryServer != null) {
+            autoSave();
         }
     }
 
@@ -108,7 +115,7 @@ public class SuperStockHistoryServer implements StockHistoryServer {
         if (this.stockHistoryServer == null) {
             return this.statementsServer.size();
         }
-        
+
         return this.statementsServer.size() + this.stockHistoryServer.size();
     }
 
@@ -120,5 +127,11 @@ public class SuperStockHistoryServer implements StockHistoryServer {
     @Override
     public long getMarketCapital() {
         return this.stockHistoryServer == null ? this.statementsServer.getMarketCapital() : this.stockHistoryServer.getMarketCapital();
+    }
+
+    private void autoSave() {
+        final File file = new File(org.yccheok.jstock.gui.Utils.getHistoryDirectory() + File.separator + this.code.toString() + ".csv");
+        final Statements statements = Statements.newInstanceFromStockHistoryServer(this, false);
+        statements.saveAsCSVFile(file);
     }
 }
